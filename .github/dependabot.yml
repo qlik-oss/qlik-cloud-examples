@@ -1,0 +1,8 @@
+version: 2
+updates:
+  - package-ecosystem: 'pip'
+    directory: '/qlik.dev/tutorials/platform-operations/sdk-python'
+    schedule:
+      interval: 'weekly'
+    commit-message:
+      prefix: chore
