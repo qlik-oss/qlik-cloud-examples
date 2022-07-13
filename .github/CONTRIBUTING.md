@@ -5,7 +5,6 @@ New platform examples or improvements to existing examples are always welcome.
 - [Code of conduct](#code-of-conduct)
 - [Bugs](#bugs)
 - [Proposing a change](#features)
-- [Developing](#developing)
 - [Git guidelines](#git)
 - [Signing the CLA](#cla)
 
