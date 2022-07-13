@@ -6,6 +6,7 @@ import argparse
 import logging
 import os
 import time
+import datetime
 import uuid
 from dataclasses import dataclass
 
@@ -56,7 +57,7 @@ class JwtAuth:
 
     def __init__(self, host, jwt_idp_config, subject="jwt_test_user_1", name="JWT Test User 1",
                  email="jwt_test_user_1@jwt.io", email_verified=True, groups=("jwt_test_group_1", "jwt_test_group_2"),
-                 expires_in=round(time.time() + 60)):
+                 expires_in=60):
         self.host = host.strip("/")
         self.jwt_idp_config = jwt_idp_config
         self.subject = subject
@@ -73,18 +74,18 @@ class JwtAuth:
         return response
 
     def _get_session(self):
+        current_time = datetime.datetime.now(tz=datetime.timezone.utc)
         if not self.session:
-            current_time_epoche_secs = int(time.time())
             claims = {
                 "sub": self.subject,
-                "nbf": current_time_epoche_secs,
-                "iat": current_time_epoche_secs,
+                "nbf": current_time,
+                "iat": current_time,
                 "jti": str(uuid.uuid4()),
                 "name": self.name,
                 "email": self.email,
                 "email_verified": self.email_verified,
                 "iss": self.jwt_idp_config.issuer,
-                "exp": self.expires_in,
+                "exp": current_time + datetime.timedelta(seconds=self.expires_in),
                 "aud": "qlik.api/login/jwt-session",
             }
 
@@ -101,8 +102,13 @@ class JwtAuth:
             session = requests.Session()
             session.headers.update({"Authorization": "Bearer " + token})
             response = session.post(f"{self.host}/login/jwt-session")
-            response.raise_for_status()
-            self.session = session
+            try:
+                response.raise_for_status()
+            except Exception:
+                logger.error(f"JWT session failed: {response.text}\n{claims}")
+                raise
+            else:
+                self.session = session
 
         return self.session
 
