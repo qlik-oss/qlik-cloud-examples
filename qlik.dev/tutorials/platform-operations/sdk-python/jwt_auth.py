@@ -5,7 +5,6 @@ This class provides JWT authorization against a Qlik Cloud tenant.
 import argparse
 import logging
 import os
-import time
 import datetime
 import uuid
 from dataclasses import dataclass
@@ -142,7 +141,7 @@ if __name__ == "__main__":
                             help="The 'email_verified' field to use in the JWT claim.")
     jwt_claims.add_argument("--groups", required=False, default=["jwt_test_group"], nargs='+',
                             help="The 'groups' field to use in the JWT claim (multiple groups can be specified).")
-    jwt_claims.add_argument("--expires_in", required=False, default=round(time.time() + 60), type=int,
+    jwt_claims.add_argument("--expires_in", required=False, default=60, type=int,
                             help="The 'expires_in' field to use in the JWT.")
 
     args = parser.parse_args()
@@ -165,6 +164,7 @@ if __name__ == "__main__":
     except Exception as e:
         logger.exception(
             f"Failed to invoke the path '{args.path}' for tenant {args.tenant_url} using the provide JWT information.")
+        exit(1)
     else:
         logger.info(
             f"Invoked the path '{args.path}' for tenant {args.tenant_url} using the provide JWT information. Response: HTTP {response.status_code}: {response.text}.")
