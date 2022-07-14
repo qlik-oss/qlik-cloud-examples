@@ -115,3 +115,5 @@ TARGET_TENANT_MANAGED_SPACE_ID="${new_managed_space_id}"
 source ./tenant_deploy_content.sh
 run
 
+echo "INFO: Successfully completed an end to end run."
+

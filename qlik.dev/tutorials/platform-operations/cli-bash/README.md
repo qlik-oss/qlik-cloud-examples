@@ -1,15 +1,14 @@
-## Qlik CLI SDK Examples
+## Qlik CLI Examples
 
-Example Qlik CLI implementations of various tutorials from [Qlik Platform Operations tutorials](https://qlik.dev/tutorials#platform-operations) on [qlik.dev](http://qlik.dev).
+Example [Qlik CLI](https://qlik.dev/libraries-and-tools/qlik-cli) implementations of various tutorials from [Qlik Platform Operations tutorials](https://qlik.dev/tutorials#platform-operations) on [qlik.dev](http://qlik.dev).
 
 ### Prerequisites
-* The setup from the [Python examples](../sdk-python) has been completed.
+* Bash 5.1 or higher
 * [Qlik CLI](https://qlik.dev/libraries-and-tools/qlik-cli) version `2.14.3` or higher is installed.
 * [The JQ command-line JSON processor](https://github.com/stedolan/jq/wiki/Installation) is installed.
+* The setup from the [Python examples](../sdk-python) has been completed.
 
 ### Running
-
-Note: All examples require that the environment variable `OAUTH_SECRET` is set.
 
 * [Create a tenant](https://qlik.dev/tutorials/create-a-tenant), example usage:
     ```bash
