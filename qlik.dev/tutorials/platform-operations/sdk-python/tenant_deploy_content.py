@@ -79,15 +79,18 @@ def import_app(sdk_client, app_file, space_id):
     dev_space = sdk_client.spaces.get(space_id)
     logger.info(f"Retrieved the space with ID '{dev_space.id}' from tenant '{sdk_client.config.host}'.")
 
-    app_name = os.path.splitext(os.path.basename(app_file.name))[0]
-    imported_app = sdk_client.apps.import_app(data=app_file, name=app_name, spaceId=space_id)
+    imported_app = sdk_client.apps.import_app(
+        data=app_file,
+        spaceId=space_id,
+        mode="autoreplace"
+    )
 
     logger.info(
-        f"Imported the app '{os.path.realpath(app_file.name)}' to app '{app_name}' with ID '{imported_app.attributes.id} in space '{dev_space.name}' with ID '{dev_space.id}' in '{sdk_client.config.host}'")
+        f"Imported the app '{os.path.realpath(app_file.name)}' to app '{imported_app.attributes.name}' with ID '{imported_app.attributes.id} in space '{dev_space.name}' with ID '{dev_space.id}' in '{sdk_client.config.host}'")
     return imported_app
 
 
-def publish_app(sdk_client, app, space_id):
+def publish_app(sdk_client, imported_app, space_id):
     space = sdk_client.spaces.get(space_id)
     logger.info(f"Retrieved the space with ID '{space_id}' from tenant '{sdk_client.config.host}'.")
 
@@ -95,9 +98,30 @@ def publish_app(sdk_client, app, space_id):
         logger.error(f"The space ID '{space_id}' given for tenant '{sdk_client.config.host}' must be a managed space.")
         exit(1)
 
-    published_app = app.publish({"spaceId": space_id})
+    # Determine if the app has already been previously published
+    published_app_id = None
+    app_items = sdk_client.items.get_items(resourceType="app", spaceId=space_id).pagination
+    for app_item in app_items:
+        if app_item.resourceAttributes['originAppId'] == imported_app.attributes.id:
+            published_app_id = app_item.resourceAttributes['id']
+            break
+
     logger.info(
-        f"Published app '{app.attributes.name}' with ID '{app.attributes.id}' to space '{space.name}' with app ID '{published_app.attributes.id}' in '{sdk_client.config.host}'.")
+        f"Queried the items in space '{space.name}' with ID '{imported_app.attributes.id}' to determine if the app with ID '{imported_app.attributes.id} has been previously published in tenant '{sdk_client.config.host}'")
+
+    if published_app_id:
+        # This will do a republish (replaces the previously published app)
+        published_app = imported_app.set_publish({"spaceId": space_id, "targetId": published_app_id})
+
+        logger.info(
+            f"Republished the app with ID '{imported_app.attributes.id}' to the app with ID '{published_app.attributes.id}' in tenant '{sdk_client.config.host}'.")
+    else:
+        published_app = imported_app.publish({"spaceId": space_id})
+        logger.info(
+            f"Published the app with ID '{imported_app.attributes.id}' to the app with ID '{published_app.attributes.id}' in tenant '{sdk_client.config.host}'.")
+
+    logger.info(
+            f"The app '{imported_app.attributes.name}' with ID '{imported_app.attributes.id}' has been published to space '{space.name}' with app ID '{published_app.attributes.id}' in tenant '{sdk_client.config.host}'.")
     return published_app
 
 
@@ -140,11 +164,11 @@ def run(source_tenant_sdk_client, source_app_id, target_tenant_sdk_client, targe
 
     with export_app(source_tenant_sdk_client, source_app_id) as exported_app_file:
         try:
-            deployed_app = import_app(target_tenant_sdk_client, exported_app_file, target_shared_space_id)
+            imported_app = import_app(target_tenant_sdk_client, exported_app_file, target_shared_space_id)
         finally:
             os.remove(exported_app_file.name)
 
-    published_app = publish_app(target_tenant_sdk_client, deployed_app, target_managed_space_id)
+    published_app = publish_app(target_tenant_sdk_client, imported_app, target_managed_space_id)
 
     if jwt_idp_config:
         verify_user_access_to_published_app(target_tenant_sdk_client, target_managed_space_id, published_app,
