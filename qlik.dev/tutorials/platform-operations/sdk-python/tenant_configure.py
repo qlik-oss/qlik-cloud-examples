@@ -127,6 +127,7 @@ def create_group(sdk_client, group_name, jwt_idp_config):
 
     if not group_id:
         logger.error(f"The group {group_name} could not be found in tenant '{sdk_client.config.host}'.")
+        exit(1)
 
     logger.info(f"Created group '{group_name}' with ID '{group_id}' in '{sdk_client.config.host}'.")
 
