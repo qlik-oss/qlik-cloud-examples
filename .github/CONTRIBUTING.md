@@ -26,41 +26,12 @@ Generally, development should be done directly towards the `main` branch.
 
 ### Branching
 
-1. Fork and clone the repository
-
-   ```sh
-   git clone git@github.com:YOUR-USERNAME/qlik-platform-examples.git
-   ```
-
-1. Create a branch in the fork
+1. Create a branch
 
    The branch should be based on the `main` branch in the master repository.
 
    ```sh
    git checkout -b my-feature-or-bugfix main
-   ```
-
-1. Commit changes on your branch
-
-   Commit changes to your branch, following the commit message format.
-
-   ```sh
-   git commit -m "fix: properly formatted SET statements."
-   ```
-
-1. Push the changes to your fork
-
-   ```sh
-   git push -u myfork my-feature-or-bugfix
-   ```
-
-1. Create a Pull Request
-
-   > Before creating a Pull Request, make sure to sign the [CLA](#cla)
-
-   In the Github UI of your fork, create a Pull Request to the `main` branch of the main repository.
-
-   If the branch has merge conflicts or has been outdated, please do a rebase against the `main` branch.
 
 ### <a name="commit"></a> Commit message guidelines
 
