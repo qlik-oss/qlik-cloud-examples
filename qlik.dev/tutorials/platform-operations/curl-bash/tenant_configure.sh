@@ -11,7 +11,9 @@ function setup_access_tokens() {
 function get_tenant_id() {
   if ! target_tenant_id=$(curl --fail-with-body -s -L \
                           -X GET "https://${TARGET_TENANT_HOSTNAME}/api/v1/users/me" \
-                          -H "Authorization: Bearer ${TARGET_TENANT_ACCESS_TOKEN}" | jq -r -e '.tenantId')
+                          -H "Authorization: Bearer ${TARGET_TENANT_ACCESS_TOKEN}" \
+                          -H "Accept: application/json" \
+                          -H "Content-Type: application/json" | jq -r -e '.tenantId')
   then
     echo "ERROR: Failed retrieved the tenant ID from tenant '${TARGET_TENANT_HOSTNAME}'."
     exit 1
@@ -152,6 +154,8 @@ function create_group() {
   # Lookup the newly created group to get the ID
   if ! analytics_consumer_group_id=$(curl --fail-with-body -s -L \
                                        -X GET "https://${TARGET_TENANT_HOSTNAME}/api/v1/groups" \
+                                       -H "Accept: application/json" \
+                                       -H "Content-Type: application/json" \
                                        -H "Authorization: Bearer ${TARGET_TENANT_ACCESS_TOKEN}" | jq -e -r --arg GROUP_NAME "${GROUP_ANALYTICS_CONSUMER}" '.data[] | select(.name == $GROUP_NAME).id');
   then
     echo "ERROR: Failed to retrieve the group '${GROUP_ANALYTICS_CONSUMER}' from tenant '${TARGET_TENANT_HOSTNAME}'."
