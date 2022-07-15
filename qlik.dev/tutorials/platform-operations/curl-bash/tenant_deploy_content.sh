@@ -64,7 +64,7 @@ function export_app() {
     exit 1
   fi
 
-    local location_header
+  local location_header
   if ! location_header=$(curl --fail-with-body -s -I -L \
                            -X POST "https://${SOURCE_TENANT_HOSTNAME}/api/v1/apps/${SOURCE_APP_ID}/export" \
                            -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" \
