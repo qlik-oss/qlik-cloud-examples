@@ -100,7 +100,6 @@ function create_tenant_admin() {
 
   echo "INFO: Retrieved user for email '${SOURCE_TENANT_ADMIN_EMAIL}' from tenant '${SOURCE_TENANT_HOSTNAME}'."
 
-
   # Retrieve the role ID for the TenantAdmin role in the newly created tenant
   qlik context use "${new_tenant_hostname}" > /dev/null
 

@@ -20,6 +20,8 @@ import tenant_create
 import tenant_deploy_content
 from jwt_auth import JwtIdpConfig
 
+logger = logging.getLogger(__name__)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -63,3 +65,5 @@ if __name__ == "__main__":
     tenant_deploy_content.run(source_tenant_sdk_client, args.source_app_id, target_tenant_sdk_client,
                               target_shared_space_id,
                               target_managed_space_id, jwt_idp_config)
+
+    logger.info("Successfully completed an end to end run.")

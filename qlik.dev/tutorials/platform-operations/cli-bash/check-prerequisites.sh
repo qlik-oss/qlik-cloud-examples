@@ -6,7 +6,6 @@ then
   exit 1
 fi
 
-
 if ! jq --version > /dev/null 2>&1 ;
 then
   echo "ERROR: jq is not installed."
