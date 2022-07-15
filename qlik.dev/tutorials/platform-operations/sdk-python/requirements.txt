@@ -1,5 +1,5 @@
 argparse-logging==2020.11.26
-beautifulsoup4==4.8.2
+beautifulsoup4==4.11.1
 bs4==0.0.1
 cffi==1.15.1
 chardet==3.0.4
