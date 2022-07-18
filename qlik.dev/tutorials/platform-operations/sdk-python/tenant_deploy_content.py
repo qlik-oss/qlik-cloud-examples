@@ -24,25 +24,36 @@ logger = logging.getLogger(__name__)
 
 
 def verify_bot_access_to_source_app(sdk_client, app_id):
-    space_id = sdk_client.apps.get(app_id).attributes.spaceId
-    logger.info(f"Retrieved the space ID for the app with ID '{app_id}' on tenant '{sdk_client.config.host}'.")
+    user_id = sdk_client.users.get_me()["id"]
 
-    if space_id:
-        user_id = sdk_client.users.get_me()["id"]
+    app = sdk_client.apps.get(app_id)
+    logger.info(f"Retrieved the app with ID '{app_id}' from tenant '{sdk_client.config.host}'.")
+
+    # If the app is in a shared space the bot user (who is a tenant admin) needs to assign themselves to the
+    # space before they can access the app
+    if hasattr(app.attributes, 'spaceId'):
+        space = sdk_client.spaces.get(app.attributes.spaceId)
+        logger.info(f"Retrieved the space with ID '{space.id}' from tenant '{sdk_client.config.host}'.")
+
+        if space.type != "shared":
+            logger.error(f"The source app with ID '{app_id}' is in a managed space, it must be in a shared or personal space on '{sdk_client.config.host}'.")
+            exit(1)
+
         roles = ["producer"]
         try:
-            space = sdk_client.spaces.get(space_id)
             space.create_assignment(AssignmentCreate(type="user", assigneeId=user_id, roles=roles))
         except HTTPError as http_error:
             # Ignore the error if the bot user has already been assigned to the space
             if http_error.response.status_code == 409:
                 logger.info(
-                    f"The user with ID '{user_id}' is already assigned to the space with ID '{space_id}' in tenant '{sdk_client.config.host}'.")
+                    f"The user with ID '{user_id}' is already assigned to the space with ID '{space.id}' in tenant '{sdk_client.config.host}'.")
             else:
                 raise http_error
         else:
             logger.info(
-                f"The user with ID '{user_id}' has been assigned to the space with ID '{space_id}' with the roles '{roles}' in tenant '{sdk_client.config.host}'.")
+                f"The user with ID '{user_id}' has been assigned to the space with ID '{space.id}' with the roles '{roles}' in tenant '{sdk_client.config.host}'.")
+
+    logger.info(f"Verified that the user with ID '{user_id}' has access to the app with '{app_id}' in tenant '{sdk_client.config.host}'.")
 
 
 def export_app(sdk_client, app_id):
@@ -82,6 +93,7 @@ def publish_app(sdk_client, app, space_id):
 
     if space.type != "managed":
         logger.error(f"The space ID '{space_id}' given for tenant '{sdk_client.config.host}' must be a managed space.")
+        exit(1)
 
     published_app = app.publish({"spaceId": space_id})
     logger.info(

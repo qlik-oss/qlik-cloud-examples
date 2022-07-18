@@ -41,15 +41,6 @@ function setup_cli_contexts() {
 function verify_bot_access_to_source_app() {
   qlik context use "${SOURCE_TENANT_HOSTNAME}" > /dev/null
 
-  local space_id
-  if ! space_id=$(qlik app get "${SOURCE_APP_ID}" | jq -r -e '.attributes.spaceId')
-  then
-    echo "ERROR: failed to retrieve the space ID for the app with ID '${SOURCE_APP_ID}' on tenant '${SOURCE_TENANT_HOSTNAME}'."
-    exit 1
-  fi
-
-  echo "INFO: Retrieved the space ID for the app with ID '${SOURCE_APP_ID}' on tenant '${SOURCE_TENANT_HOSTNAME}'."
-
   local user_id
   if ! user_id=$(qlik user me | jq -r -e '.id');
   then
@@ -57,22 +48,51 @@ function verify_bot_access_to_source_app() {
     exit 1
   fi
 
-  local create_response
-  if ! create_response=$(qlik space assignment create \
-    --spaceId "${space_id}" \
-    --assigneeId "${user_id}" \
-    --type "user" \
-    --roles "producer" 2>&1);
+  local app
+  if ! app=$(qlik app get "${SOURCE_APP_ID}")
   then
-    if [[ "${create_response}" == *Error*AssignmentConflict* ]];
+    echo "ERROR: Failed to retrieve the app with ID '${SOURCE_APP_ID}' from tenant '${SOURCE_TENANT_HOSTNAME}'."
+    exit 1
+  fi
+
+  echo "INFO: Retrieved the app with ID '${SOURCE_APP_ID}' from tenant '${SOURCE_TENANT_HOSTNAME}'."
+
+  # If the app is in a shared space the bot user (who is a tenant admin) needs to assign themselves to the
+  # space before they can access the app
+  if echo "${app}" | jq -e '.attributes | has("spaceId")' > /dev/null
+  then
+    local space_id=$(echo "${app}" | jq -r '.attributes.spaceId')
+    local space
+    if ! space=$(qlik space get "${space_id}")
     then
-      echo "INFO: The user with ID '${user_id}' is already assigned to the space with ID '${space_id}' in tenant '${SOURCE_TENANT_HOSTNAME}'."
-    else
-      echo "ERROR: Failed to assign user with ID '${user_id}' to the space with ID '${space_id}' in tenant '${SOURCE_TENANT_HOSTNAME}'."
+      echo "ERROR: Failed to retrieve the space with ID '${space_id}' on tenant '${SOURCE_TENANT_HOSTNAME}'."
       exit 1
     fi
-  else
-    echo "INFO: The user with ID '${user_id}' has been assigned to the space with ID '{space_id}' with the 'producer' role in tenant '${SOURCE_TENANT_HOSTNAME}'."
+
+    echo "INFO: Retrieved the space with ID '${space_id}' from tenant '${SOURCE_TENANT_HOSTNAME}'."
+    if [ "$(echo "${space}" | jq -r '.type')" != "shared" ];
+    then
+      echo "ERROR: The source app with ID '${SOURCE_APP_ID}' is in a managed space, it must be in a shared or personal space on '${SOURCE_TENANT_HOSTNAME}'."
+      exit 1
+    fi
+
+    local create_response
+    if ! create_response=$(qlik space assignment create \
+      --spaceId "${space_id}" \
+      --assigneeId "${user_id}" \
+      --type "user" \
+      --roles "producer" 2>&1);
+    then
+      if [[ "${create_response}" == *Error*AssignmentConflict* ]];
+      then
+        echo "INFO: The user with ID '${user_id}' is already assigned to the space with ID '${space_id}' in tenant '${SOURCE_TENANT_HOSTNAME}'."
+      else
+        echo "ERROR: Failed to assign user with ID '${user_id}' to the space with ID '${space_id}' in tenant '${SOURCE_TENANT_HOSTNAME}'."
+        exit 1
+      fi
+    else
+      echo "INFO: The user with ID '${user_id}' has been assigned to the space with ID '{space_id}' with the 'producer' role in tenant '${SOURCE_TENANT_HOSTNAME}'."
+    fi
   fi
 }
 
@@ -166,7 +186,7 @@ function verify_user_access_to_published_app() {
                     --groups "${GROUP_ANALYTICS_CONSUMER}" \
                     --tenant-url "https://${TARGET_TENANT_HOSTNAME}" \
                     --path "/api/v1/apps/$(echo "${published_app}" | jq -e -r '.attributes.id')" \
-                    --log-level ERROR;
+                    --log-level ERROR 2>/dev/null;
     then
       break
     fi

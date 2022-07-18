@@ -10,48 +10,78 @@ function setup_access_tokens() {
 }
 
 function verify_bot_access_to_source_app() {
-  local space_id
-  if ! space_id=$(curl --fail-with-body -s -L \
-                    -X GET "https://${SOURCE_TENANT_HOSTNAME}/api/v1/apps/${SOURCE_APP_ID}" \
-                    -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" | jq -r -e '.attributes.spaceId')
-  then
-    echo "ERROR: failed to retrieve the space ID for the app with ID '${SOURCE_APP_ID}' on tenant '${SOURCE_TENANT_HOSTNAME}'."
-    exit 1
-  fi
-
-  echo "INFO: Retrieved the space ID for the app with ID '${SOURCE_APP_ID}' on tenant '${SOURCE_TENANT_HOSTNAME}'."
-
   local user_id
   if ! user_id=$(curl --fail-with-body -s -L \
                    -X GET "https://${SOURCE_TENANT_HOSTNAME}/api/v1/users/me" \
-                   -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" | jq -r -e '.id');
+                   -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" \
+                   -H "Accept: application/json" \
+                   -H "Content-Type: application/json" | jq -r -e '.id');
   then
     echo "ERROR: Failed retrieved the user ID from tenant '${SOURCE_TENANT_HOSTNAME}'."
     exit 1
   fi
 
-  local create_response
-  if ! create_response=$(curl --fail-with-body -s -L \
-                           -X POST "https://${SOURCE_TENANT_HOSTNAME}/api/v1/spaces/${space_id}/assignments" \
-                           -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" \
-                           -H "Accept: application/json" \
-                           -H "Content-Type: application/json" \
-                           -d '{
-                                  "type": "user",
-                                  "assigneeId": "'"${user_id}"'",
-                                  "roles": ["consumer"]
-                               }');
+  local app
+  if ! app=$(curl --fail-with-body -s -L \
+                -X GET "https://${SOURCE_TENANT_HOSTNAME}/api/v1/apps/${SOURCE_APP_ID}" \
+                -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" \
+                -H "Accept: application/json" \
+                -H "Content-Type: application/json")
   then
-    if [[ "$(echo "${create_response}" | jq -r -e '.code')" == "AssignmentConflict" ]];
+    echo "ERROR: Failed to retrieve the app with ID '${SOURCE_APP_ID}' from tenant '${SOURCE_TENANT_HOSTNAME}'."
+    exit 1
+  fi
+
+  echo "INFO: Retrieved the app with ID '${SOURCE_APP_ID}' from tenant '${SOURCE_TENANT_HOSTNAME}'."
+
+  # If the app is in a shared space the bot user (who is a tenant admin) needs to assign themselves to the
+  # space before they can access the app
+  if echo "${app}" | jq -e '.attributes | has("spaceId")' > /dev/null
+  then
+    local space_id=$(echo "${app}" | jq -r '.attributes.spaceId')
+    local space
+    if ! space=$(curl --fail-with-body -s -L \
+                   -X GET "https://${SOURCE_TENANT_HOSTNAME}/api/v1/spaces/${space_id}" \
+                   -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" \
+                   -H "Accept: application/json" \
+                   -H "Content-Type: application/json")
     then
-      echo "INFO: The user with ID '${user_id}' is already assigned to the space with ID '${space_id}' in tenant '${SOURCE_TENANT_HOSTNAME}'."
-    else
-      echo "ERROR: Failed to assign user with ID '${user_id}' to the space with ID '${space_id}' in tenant '${SOURCE_TENANT_HOSTNAME}': ${create_response}"
+      echo "ERROR: Failed to retrieve the space with ID '${space_id}' on tenant '${SOURCE_TENANT_HOSTNAME}'."
       exit 1
     fi
-  else
-    echo "INFO: The user with ID '${user_id}' has been assigned to the space with ID '{space_id}' with the 'producer' role in tenant '${SOURCE_TENANT_HOSTNAME}'."
+
+    echo "INFO: Retrieved the space with ID '${space_id}' from tenant '${SOURCE_TENANT_HOSTNAME}'."
+    if [ "$(echo "${space}" | jq -r '.type')" != "shared" ];
+    then
+      echo "ERROR: The source app with ID '${SOURCE_APP_ID}' is in a managed space, it must be in a shared or personal space on '${SOURCE_TENANT_HOSTNAME}'."
+      exit 1
+    fi
+
+    local create_response
+    if ! create_response=$(curl --fail-with-body -s -L \
+                             -X POST "https://${SOURCE_TENANT_HOSTNAME}/api/v1/spaces/${space_id}/assignments" \
+                             -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" \
+                             -H "Accept: application/json" \
+                             -H "Content-Type: application/json" \
+                             -d '{
+                                    "type": "user",
+                                    "assigneeId": "'"${user_id}"'",
+                                    "roles": ["consumer"]
+                                 }');
+    then
+      if [ "$(echo "${create_response}" | jq -r -e '.code')" == "AssignmentConflict" ];
+      then
+        echo "INFO: The user with ID '${user_id}' is already assigned to the space with ID '${space_id}' in tenant '${SOURCE_TENANT_HOSTNAME}'."
+      else
+        echo "ERROR: Failed to assign user with ID '${user_id}' to the space with ID '${space_id}' in tenant '${SOURCE_TENANT_HOSTNAME}': ${create_response}"
+        exit 1
+      fi
+    else
+      echo "INFO: The user with ID '${user_id}' has been assigned to the space with ID '${space_id}' with the 'producer' role in tenant '${SOURCE_TENANT_HOSTNAME}'."
+    fi
   fi
+
+  echo "INFO: Verified that the user with ID '${user_id}' has access to the app with '${SOURCE_APP_ID}' in tenant '${SOURCE_TENANT_HOSTNAME}'."
 }
 
 function export_app() {
@@ -169,7 +199,7 @@ function verify_user_access_to_published_app() {
                     --groups "${GROUP_ANALYTICS_CONSUMER}" \
                     --tenant-url "https://${TARGET_TENANT_HOSTNAME}" \
                     --path "/api/v1/apps/$(echo "${published_app}" | jq -e -r '.attributes.id')" \
-                    --log-level ERROR;
+                    --log-level ERROR 2>/dev/null;
     then
       break
     fi
