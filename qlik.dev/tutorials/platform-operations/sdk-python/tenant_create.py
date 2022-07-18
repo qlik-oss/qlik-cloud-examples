@@ -54,11 +54,13 @@ def check_access_to_tenant(sdk_client, tenant_id):
 
 
 def create_tenant_admin(source_tenant_sdk_client, target_tenant_sdk_client, source_tenant_admin_email):
-    source_tenant_admin_user = next(source_tenant_sdk_client.users.get_users(status=None,
-                                                                             filter=f"email eq \"{source_tenant_admin_email}\"").pagination)
+    source_tenant_admin_user = None
+    for user in source_tenant_sdk_client.users.get_users(status=None, filter=f"email eq \"{source_tenant_admin_email}\"").pagination:
+        source_tenant_admin_user = user
+
     if not source_tenant_admin_user:
         raise RuntimeError(
-            f"No user with email '{source_tenant_admin_email}' exists in the tenant '{source_tenant_sdk_client.config.host}.")
+            f"No user with email '{source_tenant_admin_email}' exists in the tenant '{source_tenant_sdk_client.config.host}'.")
 
     logger.info(
         f"Retrieved user for email '{source_tenant_admin_email}' from tenant '{source_tenant_sdk_client.config.host}'.")
