@@ -173,10 +173,13 @@ def run(jwt_auth, sdk_client, published_app_id, published_app_sheet_id=None):
 
     logger.info(
         f"Starting web server using embedded sheet with ID '{published_app_sheet_id}' from app with ID '{published_app_id}' from tenant '{jwt_auth.host}'.")
+
+    print()
+    print(f"To view the embedded content open this URL in your browser: {constants.LOCAL_WEB_SERVER_ADDRESS}")
+    print()
     logger.warning(
         "If you're using Chrome you'll need to enable self signed certificates, see https://communicode.io/allow-https-localhost-chrome/. For other browsers, YMMV...")
 
-    logger.info(f"Serving local content from {constants.LOCAL_WEB_SERVER_ADDRESS}")
     httpd.serve_forever()
 
 
