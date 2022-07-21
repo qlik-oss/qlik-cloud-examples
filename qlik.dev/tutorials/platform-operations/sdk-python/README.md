@@ -55,7 +55,7 @@ pip install -r requirements.txt
       --jwt-public-key ./publickey.cer
     ```
 
-* Embed a Qlik Sense application in an iFrame and access using JWT authentication, example usage:
+* Embed a Qlik Sense application in an iFrame and access using JWT authentication. This example uses the HTML from [this]([here](https://qlik.dev/tutorials/embed-content-using-iframes-and-anonymous-access#step-3---configure-web-page-variables)) section of the [Embed content using iframes and anonymous access](https://qlik.dev/tutorials/embed-content-using-iframes-and-anonymous-access) tutorial (the Javascript variables are substituted using Jinja). Example usage:
     ```bash
     python ./tenant_embed_content.py \
       --client-id <CLIENT_ID> \
