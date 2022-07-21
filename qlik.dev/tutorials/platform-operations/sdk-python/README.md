@@ -55,7 +55,20 @@ pip install -r requirements.txt
       --jwt-public-key ./publickey.cer
     ```
 
-* Create, configure, and deploy content to a tenant - combines multiple examples into a single end to end execution, example usage:
+* Embed a Qlik Sense application in an iFrame and access using JWT authentication. This example uses the HTML from [this]([here](https://qlik.dev/tutorials/embed-content-using-iframes-and-anonymous-access#step-3---configure-web-page-variables)) section of the [Embed content using iframes and anonymous access](https://qlik.dev/tutorials/embed-content-using-iframes-and-anonymous-access) tutorial (the Javascript variables are substituted using Jinja). Example usage:
+    ```bash
+    python ./tenant_embed_content.py \
+      --client-id <CLIENT_ID> \
+      --client-secret <CLIENT_SECRET> \
+      --target-tenant-hostname <HOSTNAME> \
+      --target-published-app-id "<APP_ID>" \
+      --jwt-issuer <ISSUER> \
+      --jwt-key-id <KEY_ID> \
+      --jwt-private-key ./privatekey.pem \ 
+      --jwt-public-key ./publickey.cer
+    ```
+
+* Create, configure, deploy, and embed content in a new tenant - combines multiple examples into a single end to end execution, example usage:
     ```bash
     python tenant_end_to_end.py \
       --client-id <CLIENT_ID> \

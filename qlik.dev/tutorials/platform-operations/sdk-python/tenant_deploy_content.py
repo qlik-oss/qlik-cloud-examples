@@ -36,7 +36,7 @@ def verify_bot_access_to_source_app(sdk_client, app_id):
         logger.info(f"Retrieved the space with ID '{space.id}' from tenant '{sdk_client.config.host}'.")
 
         if space.type != "shared":
-            logger.error(f"The source app with ID '{app_id}' is in a managed space, it must be in a shared or personal space on '{sdk_client.config.host}'.")
+            logger.error(f"The source app with ID '{app_id}' is in a managed space, it must be in a shared or personal space in tenant '{sdk_client.config.host}'.")
             exit(1)
 
         roles = ["producer"]
@@ -177,6 +177,8 @@ def run(source_tenant_sdk_client, source_app_id, target_tenant_sdk_client, targe
     logging.info(
         f"Deployed and published an app from '{source_tenant_sdk_client.config.host}' to '{target_tenant_sdk_client.config.host}'.")
 
+    return published_app.attributes.id
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -192,7 +194,7 @@ if __name__ == "__main__":
 
     target_tenant_group = parser.add_argument_group("Target Tenant Information")
     target_tenant_group.add_argument("--target-tenant-hostname", required=True,
-                                     help="The hostname of the target tenant to configure, for example: tenant.region.qlikcloud.com")
+                                     help="The hostname of the target tenant to deploy content to, for example: tenant.region.qlikcloud.com")
     target_tenant_group.add_argument("--target-shared-space-id", required=True, help="increase output verbosity")
     target_tenant_group.add_argument("--target-managed-space-id", required=True, help="increase output verbosity")
 
