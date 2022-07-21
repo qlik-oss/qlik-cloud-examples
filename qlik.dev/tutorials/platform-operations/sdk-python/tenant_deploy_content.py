@@ -36,7 +36,7 @@ def verify_bot_access_to_source_app(sdk_client, app_id):
         logger.info(f"Retrieved the space with ID '{space.id}' from tenant '{sdk_client.config.host}'.")
 
         if space.type != "shared":
-            logger.error(f"The source app with ID '{app_id}' is in a managed space, it must be in a shared or personal space on '{sdk_client.config.host}'.")
+            logger.error(f"The source app with ID '{app_id}' is in a managed space, it must be in a shared or personal space in tenant '{sdk_client.config.host}'.")
             exit(1)
 
         roles = ["producer"]

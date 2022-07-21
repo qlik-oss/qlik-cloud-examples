@@ -69,6 +69,10 @@ def get_random_sheet_id(sdk_client, app_id):
         })
         sheet_list_layout = session_obj.get_layout()
         sheet_id_list = [q.qInfo.qId for q in sheet_list_layout.qAppObjectList.qItems]
+        if len(sheet_id_list) == 0:
+            logger.error(f"There are no public sheets in the app with ID '{app_id}' on tenant '{sdk_client.config.host}'.")
+            exit(1)
+
         random_sheet_id = sheet_id_list[random.randint(0, len(sheet_id_list) - 1)]
 
         logger.info(
