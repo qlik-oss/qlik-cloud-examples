@@ -107,7 +107,7 @@ function export_app() {
   local app_download_path="$(echo "${location_header}" | cut -d":" -f2 | tr -d ' ')"
   echo "INFO: Retrieved download location for the app with ID '${SOURCE_APP_ID}' from tenant '${SOURCE_TENANT_HOSTNAME}'."
 
-  readonly exported_app_file="${SOURCE_APP_ID}.qvf"
+  exported_app_file="${SOURCE_APP_ID}.qvf"
   if ! curl --fail-with-body -s -L --output "${exported_app_file}" \
           -X GET "https://${SOURCE_TENANT_HOSTNAME}${app_download_path}" \
           -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" \
@@ -142,7 +142,6 @@ function import_app() {
     echo "ERROR: Failed to import the file '${exported_app_file}' to tenant '${TARGET_TENANT_HOSTNAME}'."
     exit 1
   else
-    readonly imported_app
     rm "${exported_app_file}"
   fi
 
@@ -198,7 +197,6 @@ function publish_app() {
       echo "ERROR: Failed to republish the app '${imported_app_name}' with ID '${imported_app_id}' to the existing app with ID '${published_app_id}' in tenant '${TARGET_TENANT_HOSTNAME}'."
       exit 1
     else
-      readonly published_app
       echo "INFO: Republished the app with ID '${imported_app_id}' to the app with ID '$(echo "${published_app}" | jq -r '.attributes.id')' in tenant '${TARGET_TENANT_HOSTNAME}'."
     fi
   else
@@ -212,7 +210,6 @@ function publish_app() {
       echo "ERROR: Failed to publish the app '${imported_app_name}' with ID '${imported_app_id}' to tenant '${TARGET_TENANT_HOSTNAME}'."
       exit 1
     else
-      readonly published_app
       echo "INFO: Published the app with ID '${imported_app_id}' to the app with ID '$(echo "${published_app}" | jq -r '.attributes.id')' in tenant '${TARGET_TENANT_HOSTNAME}'."
     fi
   fi
@@ -223,7 +220,7 @@ function publish_app() {
 function verify_user_access_to_published_app() {
   # TODO: there's a timing issue when opening a published app, this should be fixed soon.
   local retry_count=0
-  while [ "${retry_count}" -le 120 ];
+  while [ "${retry_count}" -lt 120 ];
   do
     if python ../sdk-python/jwt_auth.py \
                     --subject "temp_user" \
@@ -244,7 +241,7 @@ function verify_user_access_to_published_app() {
     sleep 1
   done
 
-  if [ "${retry_count}" -gt 120 ];
+  if [ "${retry_count}" -ge 120 ];
   then
     echo "ERROR: Failed to verify user access for the group '${GROUP_ANALYTICS_CONSUMER}' to the published app with ID '$(echo "${published_app}" | jq -r '.attributes.id')' in tenant '${TARGET_TENANT_HOSTNAME}'."
     exit 1
@@ -253,7 +250,7 @@ function verify_user_access_to_published_app() {
   echo "INFO: Verified user access for the group '${GROUP_ANALYTICS_CONSUMER}' to the published app with ID '$(echo "${published_app}" | jq -r '.attributes.id')' in tenant '${TARGET_TENANT_HOSTNAME}'."
   if [ "${retry_count}" -gt 0 ];
   then
-      echo "WARNING: It took '${retry_count}' attempts to verify access to the published app."
+      echo "WARNING: It took '$((retry_count + 1))' attempts to verify access to the published app."
   fi
 }
 

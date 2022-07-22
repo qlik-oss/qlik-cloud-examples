@@ -198,7 +198,7 @@ function publish_app() {
 function verify_user_access_to_published_app() {
   # TODO: there's a timing issue when opening a published app, this should be fixed soon.
   local retry_count=0
-  while [ "${retry_count}" -le 120 ];
+  while [ "${retry_count}" -lt 120 ];
   do
     if python ../sdk-python/jwt_auth.py \
                     --subject "temp_user" \
@@ -219,7 +219,7 @@ function verify_user_access_to_published_app() {
     sleep 1
   done
 
-  if [ "${retry_count}" -gt 120 ];
+  if [ "${retry_count}" -ge 120 ];
   then
     echo "ERROR: Failed to verify user access for the group '${GROUP_ANALYTICS_CONSUMER}' to the published app with ID '$(echo "${published_app}" | jq -r '.attributes.id')' in tenant '${TARGET_TENANT_HOSTNAME}'."
     exit 1
@@ -228,7 +228,7 @@ function verify_user_access_to_published_app() {
   echo "INFO: Verified user access for the group '${GROUP_ANALYTICS_CONSUMER}' to the published app with ID '$(echo "${published_app}" | jq -r '.attributes.id')' in tenant '${TARGET_TENANT_HOSTNAME}'."
   if [ "${retry_count}" -gt 0 ];
   then
-      echo "WARNING: It took '${retry_count}' attempts to verify access to the published app."
+      echo "WARNING: It took '$((retry_count + 1))' attempts to verify access to the published app."
   fi
 }
 
