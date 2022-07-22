@@ -70,7 +70,7 @@ def export_app(sdk_client, app_id):
         exported_app_file.seek(0)
 
         logger.info(
-            f"Exported the app '{app.attributes.name}' with ID '{app_id}' from '{sdk_client.config.host}' to '{os.path.realpath(exported_app_file.name)}'.")
+            f"Exported the app '{app.attributes.name}' with ID '{app_id}' from '{sdk_client.config.host}' to '{exported_app_file.name}'.")
 
         return exported_app_file
 
@@ -136,7 +136,7 @@ def verify_user_access_to_published_app(sdk_client, managed_space_id, published_
 
     # TODO: there's a timing issue when opening a published app, this should be fixed soon.
     retry_count = 0
-    while retry_count <= 120:
+    while retry_count < 120:
         try:
             jwt_auth.rest(path=f"/api/v1/apps/{published_app.attributes.id}", method="GET")
         except HTTPError as http_error:
@@ -149,7 +149,7 @@ def verify_user_access_to_published_app(sdk_client, managed_space_id, published_
             logger.info(
                 f"Verified user access for the group '{constants.GROUP_ANALYTICS_CONSUMER}' to the published app with ID '{published_app.attributes.id}' in tenant '{sdk_client.config.host}'.")
             if retry_count > 0:
-                logger.warning(f"It took '{retry_count}' attempts to verify access to the published app.")
+                logger.warning(f"It took '{retry_count + 1}' attempts to verify access to the published app.")
             break
 
     # Delete the temporary user, it's not needed
