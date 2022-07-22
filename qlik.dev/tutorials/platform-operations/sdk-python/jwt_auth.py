@@ -67,7 +67,11 @@ class JwtAuth:
         self.expires_in = expires_in
 
     def rest(self, path, method, data=None, params=None, headers=None):
-        response = self._get_session().request(method, self.host + path, params, data, headers)
+        response = self._get_session().request(method, self.host + path,
+                                               params=params,
+                                               data=data,
+                                               headers=headers,
+                                               timeout=10)
         response.raise_for_status()
 
         return response
