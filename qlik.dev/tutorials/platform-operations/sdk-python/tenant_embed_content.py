@@ -4,6 +4,8 @@ import json
 import logging
 import random
 import ssl
+import threading
+import webbrowser
 from urllib.parse import urlparse
 
 from argparse_logging import add_log_level_argument
@@ -16,28 +18,43 @@ from jwt_auth import JwtAuth, JwtIdpConfig
 logger = logging.getLogger(__name__)
 
 
-class CORSHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
-    jwt_auth = None
-    index_html_page = None
+class CORSHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
+
+    def __init__(self, jwt_auth, index_html_page):
+        self.jwt_auth = jwt_auth
+        self.index_html_page = index_html_page
+        self.is_jwt_request_handled = False
+
+    def __call__(self, *args, **kwargs):
+        """Handle a request."""
+        super().__init__(*args, **kwargs)
 
     def end_headers(self):
         # Include additional response headers here. CORS for example:
         self.send_header('Access-Control-Allow-Origin', '*')
-        http.server.SimpleHTTPRequestHandler.end_headers(self)
+        http.server.BaseHTTPRequestHandler.end_headers(self)
 
     def do_GET(self):
+        logger.info(f"Handled: {self.path}")
+
         if self.path == '/jwt':
+            self.is_jwt_request_handled = True
             self.send_response(200)
             self.send_header("Content-type", "Content-Type: application/json")
             self.end_headers()
             self.wfile.write(bytes(json.dumps({
                 "body": self.jwt_auth.generate_token()
             }), "utf-8"))
-        else:
+        elif self.path == "/":
             self.send_response(200)
             self.send_header("Content-type", "text/html")
             self.end_headers()
             self.wfile.write(bytes(self.index_html_page, "utf-8"))
+        else:
+            self.send_response(404)
+
+    def is_jwt_request_handled(self):
+        return self.path
 
 
 def get_random_sheet_id(sdk_client, app_id):
@@ -70,7 +87,8 @@ def get_random_sheet_id(sdk_client, app_id):
         sheet_list_layout = session_obj.get_layout()
         sheet_id_list = [q.qInfo.qId for q in sheet_list_layout.qAppObjectList.qItems]
         if len(sheet_id_list) == 0:
-            logger.error(f"There are no public sheets in the app with ID '{app_id}' on tenant '{sdk_client.config.host}'.")
+            logger.error(
+                f"There are no public sheets in the app with ID '{app_id}' on tenant '{sdk_client.config.host}'.")
             exit(1)
 
         random_sheet_id = sheet_id_list[random.randint(0, len(sheet_id_list) - 1)]
@@ -142,7 +160,7 @@ def create_content_security_policy(sdk_client):
         f"Created content security policy {csp['name']} with ID '{csp['id']}' in tenant '{sdk_client.config.host}'.")
 
 
-def run(jwt_auth, sdk_client, published_app_id, published_app_sheet_id=None):
+def run(jwt_auth, sdk_client, published_app_id, published_app_sheet_id, exit_on_page_load):
     web_integration_id = create_web_integration(sdk_client)
     create_content_security_policy(sdk_client)
 
@@ -168,23 +186,31 @@ def run(jwt_auth, sdk_client, published_app_id, published_app_sheet_id=None):
     ctx.check_hostname = False
     ctx.load_cert_chain(certfile=jwt_auth.config.public_key_file_path, keyfile=jwt_auth.config.private_key_file_path)
 
-    handler = CORSHTTPRequestHandler
-    handler.jwt_auth = jwt_auth
-    handler.index_html_page = index_html_page
+    handler = CORSHTTPRequestHandler(jwt_auth, index_html_page)
 
     httpd = http.server.HTTPServer(web_server_address, handler)
     httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)
 
+    browser_thread = threading.Thread(target=launch_browser)
+    browser_thread.start()
+
     logger.info(
         f"Starting web server using embedded sheet with ID '{published_app_sheet_id}' from app with ID '{published_app_id}' from tenant '{jwt_auth.host}'.")
 
-    print()
-    print(f"To view the embedded content open this URL in your browser: {constants.LOCAL_WEB_SERVER_ADDRESS}")
-    print()
+    if exit_on_page_load:
+        logger.info("Once the web page is loaded the webserver will be shutdown.")
+        while not handler.is_jwt_request_handled:
+            httpd.handle_request()
+    else:
+        httpd.serve_forever()
+
+
+def launch_browser():
     logger.warning(
         "If you're using Chrome you'll need to enable self signed certificates, see https://communicode.io/allow-https-localhost-chrome/. For other browsers, YMMV...")
+    logger.info(f"Launching browser to view embedded content: {constants.LOCAL_WEB_SERVER_ADDRESS}")
 
-    httpd.serve_forever()
+    webbrowser.open_new(constants.LOCAL_WEB_SERVER_ADDRESS)
 
 
 if __name__ == "__main__":
@@ -192,6 +218,8 @@ if __name__ == "__main__":
     add_log_level_argument(parser)
     parser.add_argument("--client-id", required=True, help="The OAuth client ID.")
     parser.add_argument("--client-secret", required=True, help="The OAuth client secret.")
+    parser.add_argument("--exit-on-page-load", required=False, action='store_true', default=False,
+                        help="Whether the webserver that host the embedded content should be shutdown after loading the embedded content once.")
 
     target_tenant_group = parser.add_argument_group("Target Tenant Information")
     target_tenant_group.add_argument("--target-tenant-hostname", required=True,
@@ -238,4 +266,5 @@ if __name__ == "__main__":
     target_tenant_sdk_client = qlik_sdk_helper.create_sdk_client(args.client_id, args.client_secret,
                                                                  args.target_tenant_hostname)
 
-    run(jwt_auth, target_tenant_sdk_client, args.target_published_app_id, args.target_published_app_sheet_id)
+    run(jwt_auth, target_tenant_sdk_client, args.target_published_app_id, args.target_published_app_sheet_id,
+        args.exit_on_page_load)
