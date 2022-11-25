@@ -10,15 +10,17 @@ Example [Postman](https://www.postman.com/) API collection which demonstrates va
 
 ### Running the collection
 
-To run the whole collection, go to the collection Variables tab and set the variables as per the linked tutorial. The collections use javascript in `Tests` to assist with passing access tokens and other variables between steps, and also to confirm the expected response code for each request.
+To run the whole collection, go to the collection Variables tab and set the variables as per the linked tutorial, which contains more detailed descriptions about each variable and example values. The collection uses javascript in `Tests` to assist with passing access tokens and other variables between steps, and also to confirm the expected response code for each request. Temporary variables are saved in the collection to help you explore the process, so after running the collection the collection variable list will be considerably larger.
 
-If you encounter problems with the public and private key, ensure you have removed all line breaks.
+Please note:
 
-The runner will break at step 4.6 due to requiring a local binary file for the app import step.
+* If you encounter problems with the public and private key, ensure you have removed all line breaks.
 
-> **Important:** Steps 3.5 and 3.6 in the collection leverage the [postman-util-lib](https://github.com/joolfe/postman-util-lib) library (MIT License). Before using this collection you should ensure you should review this third-party library.
+* The runner will break at step 4.6 due to requiring a local binary file for the app import step.
 
-The [Platform Operations collection](./Platform%20Operations.postman_collection.json) approximately aligns to the following documentation:
+* **Important:** Steps 3.5 and 3.6 in the collection leverage the [postman-util-lib](https://github.com/joolfe/postman-util-lib) library (MIT License). Before using this collection you should ensure you should review this third-party library.
+
+The [Platform Operations collection](./Platform%20Operations%20Example.postman_collection.json) approximately aligns to the following documentation:
 
 * [1 - Create a tenant](https://qlik.dev/tutorials/create-a-tenant)
 
