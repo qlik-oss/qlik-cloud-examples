@@ -1,0 +1,2085 @@
+{
+	"info": {
+		"_postman_id": "ecbb73f9-cb2d-4af6-94ef-f9fa841f7f00",
+		"name": "Platform Operations Example",
+		"description": "For more information, refer to [https://github.com/qlik-oss/qlik-platform-examples](https://github.com/qlik-oss/qlik-platform-examples)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "11630537"
+	},
+	"item": [
+		{
+			"name": "1 - Create tenant",
+			"item": [
+				{
+					"name": "1.1 Get access token for source tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.collectionVariables.set(\"source_access_token\", responseJson.access_token);",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"client_id\":\"{{client_id}}\",\n    \"client_secret\":\"{{client_secret}}\",\n    \"grant_type\":\"client_credentials\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{source_tenant}}.{{region}}.qlikcloud.com/oauth/token",
+							"protocol": "https",
+							"host": [
+								"{{source_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"oauth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "1.2 Get signed license key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.collectionVariables.set(\"signed_entitlement_key\", responseJson.licenseKey);",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{source_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{source_tenant}}.{{region}}.qlikcloud.com/api/v1/licenses/overview",
+							"protocol": "https",
+							"host": [
+								"{{source_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"licenses",
+								"overview"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "1.3 Get access token for registration tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.collectionVariables.set(\"register_access_token\", responseJson.access_token);",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"client_id\":\"{{client_id}}\",\n    \"client_secret\":\"{{client_secret}}\",\n    \"grant_type\":\"client_credentials\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://register.{{region}}.qlikcloud.com/oauth/token",
+							"protocol": "https",
+							"host": [
+								"register",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"oauth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "1.4 Create new tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.collectionVariables.set(\"target_tenant\", responseJson.name);",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{register_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"licenseKey\": \"{{signed_entitlement_key}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://register.{{region}}.qlikcloud.com/api/v1/tenants",
+							"protocol": "https",
+							"host": [
+								"register",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"tenants"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "1.5 Get access token for target tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.collectionVariables.set(\"target_access_token\", responseJson.access_token);",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"client_id\":\"{{client_id}}\",\n    \"client_secret\":\"{{client_secret}}\",\n    \"grant_type\":\"client_credentials\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/oauth/token",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"oauth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "1.6 Confirm access to target tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(301);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{target_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/users/me",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"me"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2 - Add Qlik Account user on target tenant",
+			"item": [
+				{
+					"name": "2.1 Get access token for source tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.collectionVariables.set(\"source_access_token\", responseJson.access_token);",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"client_id\":\"{{client_id}}\",\n    \"client_secret\":\"{{client_secret}}\",\n    \"grant_type\":\"client_credentials\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{source_tenant}}.{{region}}.qlikcloud.com/oauth/token",
+							"protocol": "https",
+							"host": [
+								"{{source_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"oauth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2.2 Retrieve user subject by email on the source tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.collectionVariables.set(\"idp_subject\", responseJson.data[0].subject);",
+									"pm.collectionVariables.set(\"user_name\", responseJson.data[0].name);",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{source_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{source_tenant}}.{{region}}.qlikcloud.com/api/v1/users?filter=email eq \"{{email_address}}\"",
+							"protocol": "https",
+							"host": [
+								"{{source_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users"
+							],
+							"query": [
+								{
+									"key": "filter",
+									"value": "email eq \"{{email_address}}\""
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2.3 Get access token for target tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.collectionVariables.set(\"target_access_token\", responseJson.access_token);",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"client_id\":\"{{client_id}}\",\n    \"client_secret\":\"{{client_secret}}\",\n    \"grant_type\":\"client_credentials\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/oauth/token",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"oauth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2.4 Add the user to the target tenant as TenantAdmin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{target_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"{{user_name}}\",\n  \"subject\": \"{{idp_subject}}\",\n  \"email\": \"{{email_address}}\",\n  \"roles\": [\"TenantAdmin\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/users",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3 - Configure tenant",
+			"item": [
+				{
+					"name": "3.1 Get access token for target tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.collectionVariables.set(\"target_access_token\", responseJson.access_token);",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"client_id\":\"{{client_id}}\",\n    \"client_secret\":\"{{client_secret}}\",\n    \"grant_type\":\"client_credentials\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/oauth/token",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"oauth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.2 Enable auto group creation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(204);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{target_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[\r\n    {\r\n        \"op\": \"replace\",\r\n        \"path\": \"/autoCreateGroups\",\r\n        \"value\": true\r\n    },\r\n    {\r\n        \"op\": \"replace\",\r\n        \"path\": \"/syncIdpGroups\",\r\n        \"value\": true\r\n    }\r\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/groups/settings",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"groups",
+								"settings"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.3 Configure auto license assignment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{target_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"autoAssignProfessional\": false,\r\n    \"autoAssignAnalyzer\": true\r\n}"
+						},
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/licenses/settings",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"licenses",
+								"settings"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.4 Get target tenant id",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();\r",
+									"\r",
+									"pm.collectionVariables.set(\"target_tenant_id\", responseJson.data[0].id);\r",
+									"\r",
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{target_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/tenants",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"tenants"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.5 Load external library to create JWT*",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code should be 200\", function () {",
+									"    pm.response.to.have.status(200)",
+									"    pm.collectionVariables.set(\"pmlib_code\", responseBody)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "https://joolfe.github.io/postman-util-lib/dist/bundle.js",
+							"protocol": "https",
+							"host": [
+								"joolfe",
+								"github",
+								"io"
+							],
+							"path": [
+								"postman-util-lib",
+								"dist",
+								"bundle.js"
+							]
+						},
+						"description": "Load the postman-util-lib from github.io and load into postman global variable."
+					},
+					"response": []
+				},
+				{
+					"name": "3.6 Create JWT IDP for seeding groups",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"\r",
+									"eval( pm.collectionVariables.get('pmlib_code') );\r",
+									"var jwtSecret = pm.collectionVariables.get('private_key');\r",
+									"\r",
+									"var payload = {\r",
+									"  \"sub\": \"tmpgroupprovisioning\",\r",
+									"  \"subType\": \"user\",\r",
+									"  \"name\": \"temporary group user\",\r",
+									"  \"email\": \"noreply@qlik.com\",\r",
+									"  \"email_verified\": false,\r",
+									"  \"groups\": pm.collectionVariables.get('group'),\r",
+									"  \"aud\": \"qlik.api/login/jwt-session\",\r",
+									"  \"iss\": pm.collectionVariables.get('issuer')\r",
+									"}\r",
+									"\r",
+									"var alg ='RS256';\r",
+									"var kid = pm.collectionVariables.get('key_id');\r",
+									"\r",
+									"var jwt_token = pmlib.createJws(jwtSecret, payload, {}, exp=600, alg, kid);\r",
+									"\r",
+									"pm.collectionVariables.set('jwt_token', jwt_token);"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();\r",
+									"\r",
+									"pm.collectionVariables.set(\"jwt_idp_id\", responseJson.id);\r",
+									"\r",
+									"pm.collectionVariables.unset(\"pmlib_code\");\r",
+									"\r",
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(201);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{target_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"provider\": \"external\",\r\n  \"interactive\": false,\r\n  \"active\": true,\r\n  \"protocol\": \"jwtAuth\",\r\n  \"tenantIds\": [\r\n    \"{{target_tenant_id}}\"\r\n  ],\r\n  \"options\": {\r\n    \"staticKeys\": [\r\n      {\r\n        \"pem\": \"{{public_key}}\",\r\n        \"kid\": \"{{key_id}}\"\r\n      }\r\n    ],\r\n    \"issuer\": \"{{issuer}}\"\r\n  }\r\n}"
+						},
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/identity-providers",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"identity-providers"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.7 Impersonate login to create groups",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/login/jwt-session",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"login",
+								"jwt-session"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.8 Delete JWT IDP used for seeding groups",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.unset(\"jwt_idp_id\");\r",
+									"pm.collectionVariables.unset(\"jwt_token\");\r",
+									"\r",
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(204);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{target_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/identity-providers/{{jwt_idp_id}}",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"identity-providers",
+								"{{jwt_idp_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.9 Retrieve group id from target tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let groups = JSON.parse(responseBody).data;\r",
+									"\r",
+									"pm.collectionVariables.set('group_id', groups[0].id);\r",
+									"\r",
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{target_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/groups?filter=name eq \"{{group}}\"",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"groups"
+							],
+							"query": [
+								{
+									"key": "filter",
+									"value": "name eq \"{{group}}\""
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.10 Create Shared Space",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var responseJson = JSON.parse(responseBody);\r",
+									"pm.collectionVariables.set('shared_space_id', responseJson.id);\r",
+									"\r",
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(201);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{target_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/ecmascript",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \r\n    \"name\": \"{{shared_space_name}}\",\r\n    \"type\": \"shared\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/spaces",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"spaces"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.11 Create Managed Space",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var responseJson = JSON.parse(responseBody);\r",
+									"pm.collectionVariables.set('managed_space_id', responseJson.id);\r",
+									"\r",
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(201);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{target_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/ecmascript",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/ecmascript",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \r\n    \"name\": \"{{managed_space_name}}\",\r\n    \"type\": \"managed\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/spaces",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"spaces"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.12 Assign group to managed space",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(201);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{target_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"type\": \"group\",\r\n    \"assigneeId\": \"{{group_id}}\",\r\n    \"roles\": [\r\n        \"consumer\"\r\n    ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/spaces/{{managed_space_id}}/assignments",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"spaces",
+								"{{managed_space_id}}",
+								"assignments"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4 - Deploy applications",
+			"item": [
+				{
+					"name": "4.1 Get access token for source tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();\r",
+									"\r",
+									"pm.collectionVariables.set(\"source_access_token\", responseJson.access_token);\r",
+									"\r",
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"client_id\":\"{{client_id}}\",\r\n    \"client_secret\":\"{{client_secret}}\",\r\n    \"grant_type\":\"client_credentials\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{source_tenant}}.{{region}}.qlikcloud.com/oauth/token",
+							"protocol": "https",
+							"host": [
+								"{{source_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"oauth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.2 Find source app id on source tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();\r",
+									"\r",
+									"pm.collectionVariables.set(\"source_app_id\", responseJson.data[0].resourceId);\r",
+									"\r",
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{source_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{source_tenant}}.{{region}}.qlikcloud.com/api/v1/items?resourceType=app&name={{source_app_name}}",
+							"protocol": "https",
+							"host": [
+								"{{source_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"items"
+							],
+							"query": [
+								{
+									"key": "resourceType",
+									"value": "app"
+								},
+								{
+									"key": "name",
+									"value": "{{source_app_name}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.3 Request app export",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const response = pm.response;\r",
+									"\r",
+									"var headers = response.headers;\r",
+									"console.log(\"repo\", headers);\r",
+									"\r",
+									"for (const pair of Object.entries(headers)) {\r",
+									"   if(`${pair[0]}`=='members'){\r",
+									"       pm.collectionVariables.set('source_app_path', `${pair[1]}`.split('Location: ')[1].split(',')[0])\r",
+									"   }\r",
+									"}\r",
+									"\r",
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(201);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{source_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "default"
+							}
+						],
+						"url": {
+							"raw": "https://{{source_tenant}}.{{region}}.qlikcloud.com/api/v1/apps/{{source_app_id}}/export?NoData=true",
+							"protocol": "https",
+							"host": [
+								"{{source_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"apps",
+								"{{source_app_id}}",
+								"export"
+							],
+							"query": [
+								{
+									"key": "NoData",
+									"value": "true"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.4 Download binary from temp contents",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{source_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/octet-stream",
+								"type": "default"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{source_tenant}}.{{region}}.qlikcloud.com/{{source_app_path}}",
+							"protocol": "https",
+							"host": [
+								"{{source_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"{{source_app_path}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.5 Get access token for target tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();\r",
+									"\r",
+									"pm.collectionVariables.set(\"target_access_token\", responseJson.access_token);\r",
+									"\r",
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"client_id\":\"{{client_id}}\",\r\n    \"client_secret\":\"{{client_secret}}\",\r\n    \"grant_type\":\"client_credentials\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/oauth/token",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"oauth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.6 Import app to shared space on target tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();\r",
+									"pm.collectionVariables.set('target_app_id', responseJson.attributes.id);\r",
+									"\r",
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{target_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/octet-stream",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "file",
+							"file": {
+								"src": "/C:/Users/aqh/Downloads/Reload Analyzer v2.0.7.qvf"
+							}
+						},
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/apps/import?spaceId={{shared_space_id}}",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"apps",
+								"import"
+							],
+							"query": [
+								{
+									"key": "spaceId",
+									"value": "{{shared_space_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.7 Publish app to managed space on target tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{target_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"spaceId\": \"{{managed_space_id}}\",\r\n    \"attributes\": {\r\n        \"description\": \"This is the published app for end users\"\r\n    }\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/apps/{{target_app_id}}/publish",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"apps",
+								"{{target_app_id}}",
+								"publish"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "region",
+			"value": "<qcs-region>"
+		},
+		{
+			"key": "client_id",
+			"value": "<oauth-client-id>"
+		},
+		{
+			"key": "client_secret",
+			"value": "<oauth-client-secret>"
+		},
+		{
+			"key": "source_tenant",
+			"value": "<source-tenant-hostname>",
+			"type": "default"
+		},
+		{
+			"key": "email_address",
+			"value": "<qlik-account-email-address>",
+			"type": "string"
+		},
+		{
+			"key": "key_id",
+			"value": "key1",
+			"type": "string"
+		},
+		{
+			"key": "issuer",
+			"value": "mytenant.eu.qlikcloud.com",
+			"type": "string"
+		},
+		{
+			"key": "public_key",
+			"value": "<public-key-of-your-key-pair>",
+			"type": "string"
+		},
+		{
+			"key": "private_key",
+			"value": "<private-key-of-your-key-pair>",
+			"type": "string"
+		},
+		{
+			"key": "group",
+			"value": "My Group",
+			"type": "string"
+		},
+		{
+			"key": "managed_space_name",
+			"value": "Production",
+			"type": "string"
+		},
+		{
+			"key": "shared_space_name",
+			"value": "Staging",
+			"type": "string"
+		},
+		{
+			"key": "source_app_name",
+			"value": "Executive Dashboard",
+			"type": "string"
+		}
+	]
+}
