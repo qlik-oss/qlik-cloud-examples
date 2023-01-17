@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" href="data:,">
+    <script src="https://unpkg.com/enigma.js/enigma.min.js"></script>
+</head>
+
+<body>
+
+<div id="main">
+    <p>Content embedded from tenant: <b>{{ TENANT_HOSTNAME }} </b></p>
+    <iframe id='qlik_frame' style='border:none;width:100%;height:900px;'></iframe>
+</div>
+
+<script>
+
+        //    CONFIGURATION
+
+        const TENANT_HOSTNAME = '{{ TENANT_HOSTNAME }}';
+        const JWT_ENDPOINT = '{{ JWT_URL }}';
+        const WEB_INTEGRATION_ID = '{{ WEB_INTEGRATION_ID }}';
+        const APP_ID = '{{ APP_ID }}';
+        const SHEET_ID = '{{ SHEET_ID }}';
+        const APP_OPEN_RETRY_COUNT = 120;
+
+        //    MAIN
+
+        (async function main() {
+            const isLoggedIn = await qlikLogin();
+            const qcsHeaders = await getQCSHeaders();
+            const [session, enigmaApp] = await connectEnigma(qcsHeaders, APP_ID);
+            handleDisconnect(session);
+            const theme = await getTheme(enigmaApp);
+            renderSingleIframe('qlik_frame', APP_ID, SHEET_ID, theme);
+        })();
+
+        //    LOGIN
+
+        async function qlikLogin() {
+            const tokenRes = await (await getJWTToken(JWT_ENDPOINT)).json();
+            const loginRes = await jwtLogin(tokenRes.body);
+            if (loginRes.status != 200) {
+                const message = 'Something went wrong while logging in.';
+                alert(message);
+                throw new Error(message);
+            }
+            const recheckLoggedIn = await checkLoggedIn();
+            if (recheckLoggedIn.status !== 200) {
+                const message = 'Third-party cookies are not enabled in your browser settings and/or browser mode.';
+                alert(message);
+                throw new Error(message);
+            }
+            console.log(`Successfully logged into tenant ${TENANT_HOSTNAME}.`);
+            return true;
+        }
+
+        async function checkLoggedIn() {
+            return await fetch(`https://${TENANT_HOSTNAME}/api/v1/users/me`, {
+                mode: 'cors',
+                credentials: 'include',
+                headers: {
+                    'qlik-web-integration-id': WEB_INTEGRATION_ID
+                },
+            })
+        }
+
+        async function getJWTToken(jwtEndpoint) {
+            return await fetch(jwtEndpoint, {
+                mode: 'cors',
+                method: 'GET'
+            })
+        }
+
+        async function jwtLogin(token) {
+            const authHeader = `Bearer ${token}`;
+            return await fetch(`https://${TENANT_HOSTNAME}/login/jwt-session?qlik-web-integration-id=${WEB_INTEGRATION_ID}`, {
+                credentials: 'include',
+                mode: 'cors',
+                method: 'POST',
+                headers: {
+                    'Authorization': authHeader,
+                    'qlik-web-integration-id': WEB_INTEGRATION_ID
+                },
+            })
+        }
+
+        async function getQCSHeaders() {
+            const response = await fetch(`https://${TENANT_HOSTNAME}/api/v1/csrf-token`, {
+                mode: 'cors',
+                credentials: 'include',
+                headers: {
+                    'qlik-web-integration-id': WEB_INTEGRATION_ID
+                },
+            })
+
+            const csrfToken = new Map(response.headers).get('qlik-csrf-token');
+            return {
+                'qlik-web-integration-id': WEB_INTEGRATION_ID,
+                'qlik-csrf-token': csrfToken,
+            };
+        }
+
+
+        //    ENIGMA ENGINE CONNECTION
+
+        async function connectEnigma(qcsHeaders, appId) {
+            const [session, app] = await getEnigmaSessionAndApp(qcsHeaders, appId);
+            return [session, app];
+        }
+
+        async function getEnigmaSessionAndApp(headers, appId) {
+            const params = Object.keys(headers)
+                .map((key) => `${key}=${headers[key]}`)
+                .join('&');
+
+            return (async () => {
+                const schema = await (await fetch('https://unpkg.com/enigma.js@2.7.0/schemas/12.612.0.json')).json();
+
+                for (let retry_count = 0; retry_count < APP_OPEN_RETRY_COUNT; retry_count++) {
+                    try {
+                        return await createEnigmaAppSession(schema, appId, params);
+                        if (retry_count > 0) {
+                            console.log(`It took '${retry_count + 1}' attempts to open an Enigma connection to the app on tenant ${TENANT_HOSTNAME}.`)
+                        }
+                    }
+                    catch {
+                        // If the socket is closed immediately following the connection this
+                        // could be due to an edge-case race condition where the newly created
+                        // user does not yet have access to the app due to access control propagation.
+                        // This bit of code will make another attempt after a 1.5 seconds.
+                        if (retry_count >= APP_OPEN_RETRY_COUNT) {
+                            console.error(`Failed to open Enigma connection to app after '${retry_count + 1}' attempts on tenant ${TENANT_HOSTNAME}.`)
+                            throw new Error(e);
+                        }
+                        const waitSecond = await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+            })();
+        }
+
+        async function createEnigmaAppSession(schema, appId, params) {
+            const session = enigma.create({
+                schema,
+                url: `wss://${TENANT_HOSTNAME}/app/${appId}?${params}`
+            });
+            const enigmaGlobal = await session.open();
+            const enigmaApp = await enigmaGlobal.openDoc(appId);
+            return [session, enigmaApp];
+        }
+
+        //    BONUS! DYNAMICALLY FETCH THEME
+
+        async function getTheme(enigmaApp) {
+            const createAppProps = await enigmaApp.createSessionObject({
+                qInfo: {
+                    qId: "AppPropsList",
+                    qType: "AppPropsList"
+                },
+                qAppObjectListDef: {
+                    qType: "appprops",
+                    qData: {
+                        theme: "/theme"
+                    }
+                }
+            });
+            const appProps = await enigmaApp.getObject('AppPropsList');
+            const appPropsLayout = await appProps.getLayout();
+            const theme = appPropsLayout.qAppObjectList.qItems[0].qData.theme;
+            return theme;
+        }
+
+        //    HANDLE ENGINE SESSION CLOSURE
+
+        function handleDisconnect(session) {
+            session.on('closed', () => {
+                const message = 'Due to inactivity or loss of connection, this session has ended.';
+                console.log(message);
+            });
+
+            session.on('suspended', () => {
+                const message = 'Due to loss of connection, this session has been suspended.';
+                console.log(message);
+            });
+
+            window.addEventListener('offline', () => {
+                session.close();
+            });
+        }
+
+        //    HELPER FUNCTION TO GENERATE IFRAME
+
+        function renderSingleIframe(frameId, appId, sheetId, theme) {
+            const frameUrl = `https://${TENANT_HOSTNAME}/single/?appid=${appId}&sheet=${sheetId}&theme=${theme}&opt=ctxmenu,currsel`;
+            document.getElementById(frameId).setAttribute('src', frameUrl);
+        }
+
+
+    </script>
+
+</body>
+
+</html>

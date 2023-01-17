@@ -24,25 +24,36 @@ logger = logging.getLogger(__name__)
 
 
 def verify_bot_access_to_source_app(sdk_client, app_id):
-    space_id = sdk_client.apps.get(app_id).attributes.spaceId
-    logger.info(f"Retrieved the space ID for the app with ID '{app_id}' on tenant '{sdk_client.config.host}'.")
+    user_id = sdk_client.users.get_me()["id"]
 
-    if space_id:
-        user_id = sdk_client.users.get_me()["id"]
+    app = sdk_client.apps.get(app_id)
+    logger.info(f"Retrieved the app with ID '{app_id}' from tenant '{sdk_client.config.host}'.")
+
+    # If the app is in a shared space the bot user (who is a tenant admin) needs to assign themselves to the
+    # space before they can access the app
+    if hasattr(app.attributes, 'spaceId'):
+        space = sdk_client.spaces.get(app.attributes.spaceId)
+        logger.info(f"Retrieved the space with ID '{space.id}' from tenant '{sdk_client.config.host}'.")
+
+        if space.type != "shared":
+            logger.error(f"The source app with ID '{app_id}' is in a managed space, it must be in a shared or personal space in tenant '{sdk_client.config.host}'.")
+            exit(1)
+
         roles = ["producer"]
         try:
-            space = sdk_client.spaces.get(space_id)
             space.create_assignment(AssignmentCreate(type="user", assigneeId=user_id, roles=roles))
         except HTTPError as http_error:
             # Ignore the error if the bot user has already been assigned to the space
             if http_error.response.status_code == 409:
                 logger.info(
-                    f"The user with ID '{user_id}' is already assigned to the space with ID '{space_id}' in tenant '{sdk_client.config.host}'.")
+                    f"The user with ID '{user_id}' is already assigned to the space with ID '{space.id}' in tenant '{sdk_client.config.host}'.")
             else:
                 raise http_error
         else:
             logger.info(
-                f"The user with ID '{user_id}' has been assigned to the space with ID '{space_id}' with the roles '{roles}' in tenant '{sdk_client.config.host}'.")
+                f"The user with ID '{user_id}' has been assigned to the space with ID '{space.id}' with the roles '{roles}' in tenant '{sdk_client.config.host}'.")
+
+    logger.info(f"Verified that the user with ID '{user_id}' has access to the app with '{app_id}' in tenant '{sdk_client.config.host}'.")
 
 
 def export_app(sdk_client, app_id):
@@ -59,7 +70,7 @@ def export_app(sdk_client, app_id):
         exported_app_file.seek(0)
 
         logger.info(
-            f"Exported the app '{app.attributes.name}' with ID '{app_id}' from '{sdk_client.config.host}' to '{os.path.realpath(exported_app_file.name)}'.")
+            f"Exported the app '{app.attributes.name}' with ID '{app_id}' from '{sdk_client.config.host}' to '{exported_app_file.name}'.")
 
         return exported_app_file
 
@@ -68,24 +79,49 @@ def import_app(sdk_client, app_file, space_id):
     dev_space = sdk_client.spaces.get(space_id)
     logger.info(f"Retrieved the space with ID '{dev_space.id}' from tenant '{sdk_client.config.host}'.")
 
-    app_name = os.path.splitext(os.path.basename(app_file.name))[0]
-    imported_app = sdk_client.apps.import_app(data=app_file, name=app_name, spaceId=space_id)
+    imported_app = sdk_client.apps.import_app(
+        data=app_file,
+        spaceId=space_id,
+        mode="autoreplace"
+    )
 
     logger.info(
-        f"Imported the app '{os.path.realpath(app_file.name)}' to app '{app_name}' with ID '{imported_app.attributes.id} in space '{dev_space.name}' with ID '{dev_space.id}' in '{sdk_client.config.host}'")
+        f"Imported the app '{os.path.realpath(app_file.name)}' to app '{imported_app.attributes.name}' with ID '{imported_app.attributes.id} in space '{dev_space.name}' with ID '{dev_space.id}' in '{sdk_client.config.host}'")
     return imported_app
 
 
-def publish_app(sdk_client, app, space_id):
+def publish_app(sdk_client, imported_app, space_id):
     space = sdk_client.spaces.get(space_id)
     logger.info(f"Retrieved the space with ID '{space_id}' from tenant '{sdk_client.config.host}'.")
 
     if space.type != "managed":
         logger.error(f"The space ID '{space_id}' given for tenant '{sdk_client.config.host}' must be a managed space.")
+        exit(1)
 
-    published_app = app.publish({"spaceId": space_id})
+    # Determine if the app has already been previously published
+    published_app_id = None
+    app_items = sdk_client.items.get_items(resourceType="app", spaceId=space_id).pagination
+    for app_item in app_items:
+        if app_item.resourceAttributes['originAppId'] == imported_app.attributes.id:
+            published_app_id = app_item.resourceAttributes['id']
+            break
+
     logger.info(
-        f"Published app '{app.attributes.name}' with ID '{app.attributes.id}' to space '{space.name}' with app ID '{published_app.attributes.id}' in '{sdk_client.config.host}'.")
+        f"Queried the items in space '{space.name}' with ID '{imported_app.attributes.id}' to determine if the app with ID '{imported_app.attributes.id} has been previously published in tenant '{sdk_client.config.host}'")
+
+    if published_app_id:
+        # This will do a republish (replaces the previously published app)
+        published_app = imported_app.set_publish({"spaceId": space_id, "targetId": published_app_id})
+
+        logger.info(
+            f"Republished the app with ID '{imported_app.attributes.id}' to the app with ID '{published_app.attributes.id}' in tenant '{sdk_client.config.host}'.")
+    else:
+        published_app = imported_app.publish({"spaceId": space_id})
+        logger.info(
+            f"Published the app with ID '{imported_app.attributes.id}' to the app with ID '{published_app.attributes.id}' in tenant '{sdk_client.config.host}'.")
+
+    logger.info(
+            f"The app '{imported_app.attributes.name}' with ID '{imported_app.attributes.id}' has been published to space '{space.name}' with app ID '{published_app.attributes.id}' in tenant '{sdk_client.config.host}'.")
     return published_app
 
 
@@ -100,7 +136,7 @@ def verify_user_access_to_published_app(sdk_client, managed_space_id, published_
 
     # TODO: there's a timing issue when opening a published app, this should be fixed soon.
     retry_count = 0
-    while retry_count <= 120:
+    while retry_count < 120:
         try:
             jwt_auth.rest(path=f"/api/v1/apps/{published_app.attributes.id}", method="GET")
         except HTTPError as http_error:
@@ -113,7 +149,7 @@ def verify_user_access_to_published_app(sdk_client, managed_space_id, published_
             logger.info(
                 f"Verified user access for the group '{constants.GROUP_ANALYTICS_CONSUMER}' to the published app with ID '{published_app.attributes.id}' in tenant '{sdk_client.config.host}'.")
             if retry_count > 0:
-                logger.warning(f"It took '{retry_count}' attempts to verify access to the published app.")
+                logger.warning(f"It took '{retry_count + 1}' attempts to verify access to the published app.")
             break
 
     # Delete the temporary user, it's not needed
@@ -128,11 +164,11 @@ def run(source_tenant_sdk_client, source_app_id, target_tenant_sdk_client, targe
 
     with export_app(source_tenant_sdk_client, source_app_id) as exported_app_file:
         try:
-            deployed_app = import_app(target_tenant_sdk_client, exported_app_file, target_shared_space_id)
+            imported_app = import_app(target_tenant_sdk_client, exported_app_file, target_shared_space_id)
         finally:
             os.remove(exported_app_file.name)
 
-    published_app = publish_app(target_tenant_sdk_client, deployed_app, target_managed_space_id)
+    published_app = publish_app(target_tenant_sdk_client, imported_app, target_managed_space_id)
 
     if jwt_idp_config:
         verify_user_access_to_published_app(target_tenant_sdk_client, target_managed_space_id, published_app,
@@ -140,6 +176,8 @@ def run(source_tenant_sdk_client, source_app_id, target_tenant_sdk_client, targe
 
     logging.info(
         f"Deployed and published an app from '{source_tenant_sdk_client.config.host}' to '{target_tenant_sdk_client.config.host}'.")
+
+    return published_app.attributes.id
 
 
 if __name__ == "__main__":
@@ -156,7 +194,7 @@ if __name__ == "__main__":
 
     target_tenant_group = parser.add_argument_group("Target Tenant Information")
     target_tenant_group.add_argument("--target-tenant-hostname", required=True,
-                                     help="The hostname of the target tenant to configure, for example: tenant.region.qlikcloud.com")
+                                     help="The hostname of the target tenant to deploy content to, for example: tenant.region.qlikcloud.com")
     target_tenant_group.add_argument("--target-shared-space-id", required=True, help="increase output verbosity")
     target_tenant_group.add_argument("--target-managed-space-id", required=True, help="increase output verbosity")
 

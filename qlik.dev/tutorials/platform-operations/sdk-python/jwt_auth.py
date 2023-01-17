@@ -58,7 +58,7 @@ class JwtAuth:
                  email="jwt_test_user_1@jwt.io", email_verified=True, groups=("jwt_test_group_1", "jwt_test_group_2"),
                  expires_in=60):
         self.host = host.strip("/")
-        self.jwt_idp_config = jwt_idp_config
+        self.config = jwt_idp_config
         self.subject = subject
         self.name = name
         self.email = email
@@ -67,44 +67,51 @@ class JwtAuth:
         self.expires_in = expires_in
 
     def rest(self, path, method, data=None, params=None, headers=None):
-        response = self._get_session().request(method, self.host + path, params, data, headers)
+        response = self._get_session().request(method, self.host + path,
+                                               params=params,
+                                               data=data,
+                                               headers=headers,
+                                               timeout=10)
         response.raise_for_status()
 
         return response
 
-    def _get_session(self):
+    def generate_token(self):
         current_time = datetime.datetime.now(tz=datetime.timezone.utc)
+        claims = {
+            "sub": self.subject,
+            "nbf": current_time,
+            "iat": current_time,
+            "jti": str(uuid.uuid4()),
+            "name": self.name,
+            "email": self.email,
+            "email_verified": self.email_verified,
+            "iss": self.config.issuer,
+            "exp": current_time + datetime.timedelta(seconds=self.expires_in),
+            "aud": "qlik.api/login/jwt-session",
+        }
+
+        if self.groups:
+            claims["groups"] = self.groups
+
+        private_key = open(self.config.private_key_file_path, "rb").read()
+        return jwt.encode(claims,
+                          private_key,
+                          algorithm="RS256",
+                          headers={"alg": "RS256",
+                                   "kid": self.config.key_id,
+                                   "typ": "JWT"})
+
+    def _get_session(self):
         if not self.session:
-            claims = {
-                "sub": self.subject,
-                "nbf": current_time,
-                "iat": current_time,
-                "jti": str(uuid.uuid4()),
-                "name": self.name,
-                "email": self.email,
-                "email_verified": self.email_verified,
-                "iss": self.jwt_idp_config.issuer,
-                "exp": current_time + datetime.timedelta(seconds=self.expires_in),
-                "aud": "qlik.api/login/jwt-session",
-            }
-
-            if self.groups:
-                claims["groups"] = self.groups
-
-            private_key = open(self.jwt_idp_config.private_key_file_path, "rb").read()
-            token = jwt.encode(claims,
-                               private_key,
-                               algorithm="RS256",
-                               headers={"alg": "RS256",
-                                        "kid": self.jwt_idp_config.key_id,
-                                        "typ": "JWT"})
+            token = self.generate_token()
             session = requests.Session()
             session.headers.update({"Authorization": "Bearer " + token})
             response = session.post(f"{self.host}/login/jwt-session")
             try:
                 response.raise_for_status()
             except Exception:
-                logger.error(f"JWT session failed: {response.text}\n{claims}")
+                logger.exception(f"JWT session failed: {response.text}")
                 raise
             else:
                 self.session = session

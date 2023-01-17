@@ -12,7 +12,9 @@ function setup_access_tokens() {
 function get_license_key() {
   if ! license_key=$(curl --fail-with-body -s -L \
                         -X GET "https://${SOURCE_TENANT_HOSTNAME}/api/v1/licenses/overview" \
-                        -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" | jq -r -e '.licenseKey')
+                        -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" \
+                        -H "Accept: application/json" \
+                        -H "Content-Type: application/json" | jq -r -e '.licenseKey')
   then
     echo "ERROR: Failed to retrieve license key from '${SOURCE_TENANT_HOSTNAME}'."
     exit 1
@@ -46,7 +48,9 @@ function check_access_to_tenant() {
   local user_tenant_id
   if ! user_tenant_id=$(curl --fail-with-body -s -L \
                           -X GET "https://${new_tenant_hostname}/api/v1/users/me" \
-                          -H "Authorization: Bearer ${TARGET_TENANT_ACCESS_TOKEN}" | jq -r -e '.tenantId')
+                          -H "Authorization: Bearer ${TARGET_TENANT_ACCESS_TOKEN}" \
+                          -H "Accept: application/json" \
+                          -H "Content-Type: application/json" | jq -r -e '.tenantId')
   then
     echo "ERROR: Failed to access tenant '${new_tenant_hostname}'."
     exit 1
@@ -65,9 +69,12 @@ function create_tenant_admin() {
   # Retrieve the admin user info from the source tenant
   local source_tenant_admin_user
   if ! source_tenant_admin_user=$(curl --fail-with-body -s -L \
-                                    -X GET "https://${SOURCE_TENANT_HOSTNAME}/api/v1/users" \
+                                    -X POST "https://${SOURCE_TENANT_HOSTNAME}/api/v1/users/actions/filter" \
                                     -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" \
-                                    --data-urlencode "filter=email eq \"${SOURCE_TENANT_ADMIN_EMAIL}\"" | jq -e '.data[0]')
+                                    -H "Accept: application/json" \
+                                    -H "Content-Type: application/json" \
+                                    -d '{"filter":"email eq \"'"${SOURCE_TENANT_ADMIN_EMAIL}"'\""}' | jq -e '.data[0]')
+
   then
     echo "ERROR: No user with email '${SOURCE_TENANT_ADMIN_EMAIL}' exists in the tenant '${SOURCE_TENANT_HOSTNAME}'."
     exit 1
@@ -78,8 +85,10 @@ function create_tenant_admin() {
   # Retrieve the role ID for the TenantAdmin role in the newly created tenant
   local target_tenant_admin_role_id
   if ! target_tenant_admin_role_id=$(curl --fail-with-body -s -L \
-                                        -X GET "https://${new_tenant_hostname}/api/v1/roles" \
-                                        -H "Authorization: Bearer ${TARGET_TENANT_ACCESS_TOKEN}" | jq -r -e '.data[] | select(.name == "TenantAdmin").id')
+                                       -X GET "https://${new_tenant_hostname}/api/v1/roles" \
+                                       -H "Authorization: Bearer ${TARGET_TENANT_ACCESS_TOKEN}" \
+                                       -H "Accept: application/json" \
+                                       -H "Content-Type: application/json" | jq -r -e '.data[] | select(.name == "TenantAdmin").id')
   then
     echo "ERROR: Failed to retrieve the tenant admin role from tenant '${new_tenant_hostname}'."
     exit 1

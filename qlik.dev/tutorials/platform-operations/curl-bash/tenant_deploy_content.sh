@@ -10,48 +10,78 @@ function setup_access_tokens() {
 }
 
 function verify_bot_access_to_source_app() {
-  local space_id
-  if ! space_id=$(curl --fail-with-body -s -L \
-                    -X GET "https://${SOURCE_TENANT_HOSTNAME}/api/v1/apps/${SOURCE_APP_ID}" \
-                    -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" | jq -r -e '.attributes.spaceId')
-  then
-    echo "ERROR: failed to retrieve the space ID for the app with ID '${SOURCE_APP_ID}' on tenant '${SOURCE_TENANT_HOSTNAME}'."
-    exit 1
-  fi
-
-  echo "INFO: Retrieved the space ID for the app with ID '${SOURCE_APP_ID}' on tenant '${SOURCE_TENANT_HOSTNAME}'."
-
   local user_id
   if ! user_id=$(curl --fail-with-body -s -L \
                    -X GET "https://${SOURCE_TENANT_HOSTNAME}/api/v1/users/me" \
-                   -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" | jq -r -e '.id');
+                   -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" \
+                   -H "Accept: application/json" \
+                   -H "Content-Type: application/json" | jq -r -e '.id');
   then
     echo "ERROR: Failed retrieved the user ID from tenant '${SOURCE_TENANT_HOSTNAME}'."
     exit 1
   fi
 
-  local create_response
-  if ! create_response=$(curl --fail-with-body -s -L \
-                           -X POST "https://${SOURCE_TENANT_HOSTNAME}/api/v1/spaces/${space_id}/assignments" \
-                           -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" \
-                           -H "Accept: application/json" \
-                           -H "Content-Type: application/json" \
-                           -d '{
-                                  "type": "user",
-                                  "assigneeId": "'"${user_id}"'",
-                                  "roles": ["consumer"]
-                               }');
+  local app
+  if ! app=$(curl --fail-with-body -s -L \
+                -X GET "https://${SOURCE_TENANT_HOSTNAME}/api/v1/apps/${SOURCE_APP_ID}" \
+                -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" \
+                -H "Accept: application/json" \
+                -H "Content-Type: application/json")
   then
-    if [[ "$(echo "${create_response}" | jq -r -e '.code')" == "AssignmentConflict" ]];
+    echo "ERROR: Failed to retrieve the app with ID '${SOURCE_APP_ID}' from tenant '${SOURCE_TENANT_HOSTNAME}'."
+    exit 1
+  fi
+
+  echo "INFO: Retrieved the app with ID '${SOURCE_APP_ID}' from tenant '${SOURCE_TENANT_HOSTNAME}'."
+
+  # If the app is in a shared space the bot user (who is a tenant admin) needs to assign themselves to the
+  # space before they can access the app
+  if echo "${app}" | jq -e '.attributes | has("spaceId")' > /dev/null
+  then
+    local space_id=$(echo "${app}" | jq -r '.attributes.spaceId')
+    local space
+    if ! space=$(curl --fail-with-body -s -L \
+                   -X GET "https://${SOURCE_TENANT_HOSTNAME}/api/v1/spaces/${space_id}" \
+                   -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" \
+                   -H "Accept: application/json" \
+                   -H "Content-Type: application/json")
     then
-      echo "INFO: The user with ID '${user_id}' is already assigned to the space with ID '${space_id}' in tenant '${SOURCE_TENANT_HOSTNAME}'."
-    else
-      echo "ERROR: Failed to assign user with ID '${user_id}' to the space with ID '${space_id}' in tenant '${SOURCE_TENANT_HOSTNAME}': ${create_response}"
+      echo "ERROR: Failed to retrieve the space with ID '${space_id}' on tenant '${SOURCE_TENANT_HOSTNAME}'."
       exit 1
     fi
-  else
-    echo "INFO: The user with ID '${user_id}' has been assigned to the space with ID '{space_id}' with the 'producer' role in tenant '${SOURCE_TENANT_HOSTNAME}'."
+
+    echo "INFO: Retrieved the space with ID '${space_id}' from tenant '${SOURCE_TENANT_HOSTNAME}'."
+    if [ "$(echo "${space}" | jq -r '.type')" != "shared" ];
+    then
+      echo "ERROR: The source app with ID '${SOURCE_APP_ID}' is in a managed space, it must be in a shared or personal space on '${SOURCE_TENANT_HOSTNAME}'."
+      exit 1
+    fi
+
+    local create_response
+    if ! create_response=$(curl --fail-with-body -s -L \
+                             -X POST "https://${SOURCE_TENANT_HOSTNAME}/api/v1/spaces/${space_id}/assignments" \
+                             -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" \
+                             -H "Accept: application/json" \
+                             -H "Content-Type: application/json" \
+                             -d '{
+                                    "type": "user",
+                                    "assigneeId": "'"${user_id}"'",
+                                    "roles": ["consumer"]
+                                 }');
+    then
+      if [ "$(echo "${create_response}" | jq -r -e '.code')" == "AssignmentConflict" ];
+      then
+        echo "INFO: The user with ID '${user_id}' is already assigned to the space with ID '${space_id}' in tenant '${SOURCE_TENANT_HOSTNAME}'."
+      else
+        echo "ERROR: Failed to assign user with ID '${user_id}' to the space with ID '${space_id}' in tenant '${SOURCE_TENANT_HOSTNAME}': ${create_response}"
+        exit 1
+      fi
+    else
+      echo "INFO: The user with ID '${user_id}' has been assigned to the space with ID '${space_id}' with the 'producer' role in tenant '${SOURCE_TENANT_HOSTNAME}'."
+    fi
   fi
+
+  echo "INFO: Verified that the user with ID '${user_id}' has access to the app with '${SOURCE_APP_ID}' in tenant '${SOURCE_TENANT_HOSTNAME}'."
 }
 
 function export_app() {
@@ -64,7 +94,7 @@ function export_app() {
     exit 1
   fi
 
-    local location_header
+  local location_header
   if ! location_header=$(curl --fail-with-body -s -I -L \
                            -X POST "https://${SOURCE_TENANT_HOSTNAME}/api/v1/apps/${SOURCE_APP_ID}/export" \
                            -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" \
@@ -77,7 +107,7 @@ function export_app() {
   local app_download_path="$(echo "${location_header}" | cut -d":" -f2 | tr -d ' ')"
   echo "INFO: Retrieved download location for the app with ID '${SOURCE_APP_ID}' from tenant '${SOURCE_TENANT_HOSTNAME}'."
 
-  readonly exported_app_file="${SOURCE_APP_ID}.qvf"
+  exported_app_file="${SOURCE_APP_ID}.qvf"
   if ! curl --fail-with-body -s -L --output "${exported_app_file}" \
           -X GET "https://${SOURCE_TENANT_HOSTNAME}${app_download_path}" \
           -H "Authorization: Bearer ${SOURCE_TENANT_ACCESS_TOKEN}" \
@@ -87,6 +117,7 @@ function export_app() {
     exit 1
   fi
 
+
   echo "INFO: Exported the app '${app_name}' with ID '${SOURCE_APP_ID}' from '${SOURCE_TENANT_HOSTNAME}' to '${exported_app_file}'."
 }
 
@@ -94,14 +125,16 @@ function import_app() {
   local dev_space
   if ! dev_space=$(curl --fail-with-body -s -L \
                      -X GET "https://${TARGET_TENANT_HOSTNAME}/api/v1/spaces/${TARGET_TENANT_SHARED_SPACE_ID}" \
-                    -H "Authorization: Bearer ${TARGET_TENANT_ACCESS_TOKEN}");
+                     -H "Authorization: Bearer ${TARGET_TENANT_ACCESS_TOKEN}" \
+                     -H "Accept: application/json" \
+                     -H "Content-Type: application/json");
   then
     echo "ERROR: Failed to retrieve the space with ID '${TARGET_TENANT_SHARED_SPACE_ID}' from tenant '${TARGET_TENANT_HOSTNAME}'."
     exit 1
   fi
 
   if ! imported_app=$(curl --fail-with-body -s -L \
-                        -X POST "https://${TARGET_TENANT_HOSTNAME}/api/v1/apps/import?spaceId=$(echo "${dev_space}" | jq -r '.id')" \
+                        -X POST "https://${TARGET_TENANT_HOSTNAME}/api/v1/apps/import?mode=autoreplace&spaceId=$(echo "${dev_space}" | jq -r '.id')" \
                         -H "Authorization: Bearer ${TARGET_TENANT_ACCESS_TOKEN}" \
                         -H "Content-Type: application/octet-stream" \
                         --data-binary "@${exported_app_file}");
@@ -109,7 +142,6 @@ function import_app() {
     echo "ERROR: Failed to import the file '${exported_app_file}' to tenant '${TARGET_TENANT_HOSTNAME}'."
     exit 1
   else
-    readonly imported_app
     rm "${exported_app_file}"
   fi
 
@@ -120,7 +152,9 @@ function publish_app() {
   local prod_space
   if ! prod_space=$(curl --fail-with-body -s -L \
                       -X GET "https://${TARGET_TENANT_HOSTNAME}/api/v1/spaces/${TARGET_TENANT_MANAGED_SPACE_ID}" \
-                      -H "Authorization: Bearer ${TARGET_TENANT_ACCESS_TOKEN}");
+                      -H "Authorization: Bearer ${TARGET_TENANT_ACCESS_TOKEN}" \
+                      -H "Accept: application/json" \
+                      -H "Content-Type: application/json");
   then
     echo "ERROR: Failed to retrieve the space with ID '${TARGET_TENANT_MANAGED_SPACE_ID}' from tenant '${TARGET_TENANT_HOSTNAME}'."
     exit 1
@@ -135,28 +169,58 @@ function publish_app() {
     exit 1
   fi
 
-  imported_app_id=$(echo "${imported_app}" | jq -r '.attributes.id')
-
-  if ! published_app=$(curl -s --fail-with-body -L \
-                         -X POST "https://${TARGET_TENANT_HOSTNAME}/api/v1/apps/${imported_app_id}/publish" \
-                         -H "Authorization: Bearer ${TARGET_TENANT_ACCESS_TOKEN}" \
-                         -H "Accept: application/json" \
-                         -H "Content-Type: application/json" \
-                         -d '{"spaceId": "'"${prod_space_id}"'"}')
+  # Determine if the app has already been previously published
+  local app_items
+  if ! app_items=$(curl --fail-with-body -s -L \
+                            -X GET "https://${TARGET_TENANT_HOSTNAME}/api/v1/items?resourceType=app&spaceId=${TARGET_TENANT_MANAGED_SPACE_ID}" \
+                            -H "Authorization: Bearer ${TARGET_TENANT_ACCESS_TOKEN}" \
+                            -H "Accept: application/json" \
+                            -H "Content-Type: application/json");
   then
-    echo "ERROR: Failed to publish the app '$(echo "${imported_app}" | jq -r '.attributes.name')' with ID '${imported_app_id}' to tenant '${TARGET_TENANT_HOSTNAME}'."
+    echo "ERROR: Failed to retrieve the app items from space ID '${TARGET_TENANT_MANAGED_SPACE_ID}' on tenant '${TARGET_TENANT_HOSTNAME}'."
     exit 1
-  else
-    readonly published_app
   fi
 
-  echo "INFO: Published app '$(echo "${imported_app}" | jq -r -e '.attributes.name')' with ID '${imported_app_id}' to space '$(echo "${prod_space}" | jq -r '.name')' with app ID '$(echo "${published_app}" | jq -r '.attributes.id')' in '${TARGET_TENANT_HOSTNAME}'."
+  imported_app_id=$(echo "${imported_app}" | jq -r '.attributes.id')
+  imported_app_name=$(echo "${imported_app}" | jq -r '.attributes.name')
+
+  local published_app_id
+  if published_app_id=$(echo "${app_items}" | jq -r -e --arg ORIGIN_APP_ID "${imported_app_id}" '.data[] | select(.resourceAttributes.originAppId == $ORIGIN_APP_ID).resourceAttributes.id' );
+  then
+    if ! published_app=$(curl -s --fail-with-body -L \
+                           -X PUT "https://${TARGET_TENANT_HOSTNAME}/api/v1/apps/${imported_app_id}/publish" \
+                           -H "Authorization: Bearer ${TARGET_TENANT_ACCESS_TOKEN}" \
+                           -H "Accept: application/json" \
+                           -H "Content-Type: application/json" \
+                           -d '{"spaceId": "'"${prod_space_id}"'", "targetId": "'"${published_app_id}"'"}')
+    then
+      echo "ERROR: Failed to republish the app '${imported_app_name}' with ID '${imported_app_id}' to the existing app with ID '${published_app_id}' in tenant '${TARGET_TENANT_HOSTNAME}'."
+      exit 1
+    else
+      echo "INFO: Republished the app with ID '${imported_app_id}' to the app with ID '$(echo "${published_app}" | jq -r '.attributes.id')' in tenant '${TARGET_TENANT_HOSTNAME}'."
+    fi
+  else
+    if ! published_app=$(curl -s --fail-with-body -L \
+                           -X POST "https://${TARGET_TENANT_HOSTNAME}/api/v1/apps/${imported_app_id}/publish" \
+                           -H "Authorization: Bearer ${TARGET_TENANT_ACCESS_TOKEN}" \
+                           -H "Accept: application/json" \
+                           -H "Content-Type: application/json" \
+                           -d '{"spaceId": "'"${prod_space_id}"'"}')
+    then
+      echo "ERROR: Failed to publish the app '${imported_app_name}' with ID '${imported_app_id}' to tenant '${TARGET_TENANT_HOSTNAME}'."
+      exit 1
+    else
+      echo "INFO: Published the app with ID '${imported_app_id}' to the app with ID '$(echo "${published_app}" | jq -r '.attributes.id')' in tenant '${TARGET_TENANT_HOSTNAME}'."
+    fi
+  fi
+
+  echo "INFO: The app '${imported_app_name}' with ID '${imported_app_id}' has been published to space '$(echo "${prod_space}" | jq -r '.name')' with app ID '$(echo "${published_app}" | jq -r '.attributes.id')' in tenant '${TARGET_TENANT_HOSTNAME}'."
 }
 
 function verify_user_access_to_published_app() {
   # TODO: there's a timing issue when opening a published app, this should be fixed soon.
   local retry_count=0
-  while [ "${retry_count}" -le 120 ];
+  while [ "${retry_count}" -lt 120 ];
   do
     if python ../sdk-python/jwt_auth.py \
                     --subject "temp_user" \
@@ -169,7 +233,7 @@ function verify_user_access_to_published_app() {
                     --groups "${GROUP_ANALYTICS_CONSUMER}" \
                     --tenant-url "https://${TARGET_TENANT_HOSTNAME}" \
                     --path "/api/v1/apps/$(echo "${published_app}" | jq -e -r '.attributes.id')" \
-                    --log-level ERROR;
+                    --log-level ERROR 2>/dev/null;
     then
       break
     fi
@@ -177,7 +241,7 @@ function verify_user_access_to_published_app() {
     sleep 1
   done
 
-  if [ "${retry_count}" -gt 120 ];
+  if [ "${retry_count}" -ge 120 ];
   then
     echo "ERROR: Failed to verify user access for the group '${GROUP_ANALYTICS_CONSUMER}' to the published app with ID '$(echo "${published_app}" | jq -r '.attributes.id')' in tenant '${TARGET_TENANT_HOSTNAME}'."
     exit 1
@@ -186,7 +250,7 @@ function verify_user_access_to_published_app() {
   echo "INFO: Verified user access for the group '${GROUP_ANALYTICS_CONSUMER}' to the published app with ID '$(echo "${published_app}" | jq -r '.attributes.id')' in tenant '${TARGET_TENANT_HOSTNAME}'."
   if [ "${retry_count}" -gt 0 ];
   then
-      echo "WARNING: It took '${retry_count}' attempts to verify access to the published app."
+      echo "WARNING: It took '$((retry_count + 1))' attempts to verify access to the published app."
   fi
 }
 
