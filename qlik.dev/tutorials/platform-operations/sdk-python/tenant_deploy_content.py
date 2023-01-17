@@ -130,6 +130,7 @@ def run(source_tenant_sdk_client, source_app_id, target_tenant_sdk_client, targe
         try:
             deployed_app = import_app(target_tenant_sdk_client, exported_app_file, target_shared_space_id)
         finally:
+            exported_app_file.close()
             os.remove(exported_app_file.name)
 
     published_app = publish_app(target_tenant_sdk_client, deployed_app, target_managed_space_id)
