@@ -6,7 +6,7 @@ chardet==3.0.4
 charset-normalizer==2.0.12
 configparser==4.0.2
 cryptography==37.0.4
-docutils==0.15.2
+docutils==0.19
 idna==3.3
 jmespath==0.9.4
 okta-awscli==0.3.0
