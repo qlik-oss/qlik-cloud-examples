@@ -32,6 +32,7 @@ if __name__ == "__main__":
     parser.add_argument("--client-secret", required=True, help="The OAuth client secret.")
     parser.add_argument("--tenant-registration-hostname", required=True,
                         help="The Qlik tenant registration hostname, for example: register.<REGION>.qlikcloud.com")
+    parser.add_argument("--iterations", required=False, type=int, default=1, help="The number of time to execute the end to end run.")
 
     jwt_group = parser.add_argument_group("Target Tenant JWT IdP Configuration")
     jwt_group.add_argument("--jwt-issuer", required=False, help="The 'issuer' field to use in the JWT.")
@@ -60,16 +61,20 @@ if __name__ == "__main__":
     tenant_registration_sdk_client = qlik_sdk_helper.create_sdk_client(args.client_id, args.client_secret,
                                                                        args.tenant_registration_hostname)
 
-    target_tenant_sdk_client = tenant_create.run(source_tenant_sdk_client, tenant_registration_sdk_client,
-                                                 args.client_id, args.client_secret, args.source_tenant_admin_email)
+    for i in range(0, args.iterations):
+        if args.iterations > 1:
+            logger.info(f"***** Executing iteration #{i+1}...")
 
-    target_shared_space_id, target_managed_space_id = tenant_configure.run(target_tenant_sdk_client, jwt_idp_config)
-    published_app_id = tenant_deploy_content.run(source_tenant_sdk_client, args.source_app_id, target_tenant_sdk_client,
-                              target_shared_space_id,
-                              target_managed_space_id, jwt_idp_config)
+        target_tenant_sdk_client = tenant_create.run(source_tenant_sdk_client, tenant_registration_sdk_client,
+                                                     args.client_id, args.client_secret, args.source_tenant_admin_email)
 
-    jwt_auth = JwtAuth(target_tenant_sdk_client.config.host, jwt_idp_config, subject=f"test_user", name=f"test_user",
-                       email=f"test_user@jwt.io", groups=[constants.GROUP_ANALYTICS_CONSUMER])
-    tenant_embed_content.run(jwt_auth, target_tenant_sdk_client, published_app_id)
+        target_shared_space_id, target_managed_space_id = tenant_configure.run(target_tenant_sdk_client, jwt_idp_config)
+        published_app_id = tenant_deploy_content.run(source_tenant_sdk_client, args.source_app_id, target_tenant_sdk_client,
+                                  target_shared_space_id,
+                                  target_managed_space_id, jwt_idp_config)
 
-    logger.info("Successfully completed an end to end run.")
+        jwt_auth = JwtAuth(target_tenant_sdk_client.config.host, jwt_idp_config, subject=f"test_user", name=f"test_user",
+                           email=f"test_user@jwt.io", groups=[constants.GROUP_ANALYTICS_CONSUMER])
+        tenant_embed_content.run(jwt_auth, target_tenant_sdk_client, published_app_id, None, True)
+
+        logger.info("Successfully completed an end to end run.")
