@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def verify_bot_access_to_source_app(sdk_client, app_id):
-    user_id = sdk_client.users.get_me()["id"]
+    user_id = sdk_client.users.get_me().id
 
     app = sdk_client.apps.get(app_id)
     logger.info(f"Retrieved the app with ID '{app_id}' from tenant '{sdk_client.config.host}'.")

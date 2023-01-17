@@ -46,9 +46,9 @@ def create_tenant(sdk_client, license_key):
 
 def check_access_to_tenant(sdk_client, tenant_id):
     user = sdk_client.users.get_me()
-    if user["tenantId"] != tenant_id:
+    if user.tenantId != tenant_id:
         raise RuntimeError(
-            f"The tenant '{sdk_client.config.host}' does not have the expected ID: '{tenant_id}' != '{user['tenantId']}'.")
+            f"The tenant '{sdk_client.config.host}' does not have the expected ID: '{tenant_id}' != '{user.tenantId}'.")
 
     logger.info(f"Successfully accessed tenant '{sdk_client.config.host}'.")
 
