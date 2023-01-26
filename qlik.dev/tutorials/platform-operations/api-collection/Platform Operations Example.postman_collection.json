@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "ecbb73f9-cb2d-4af6-94ef-f9fa841f7f00",
 		"name": "Platform Operations Example",
-		"description": "For more information, refer to [https://github.com/qlik-oss/qlik-platform-examples](https://github.com/qlik-oss/qlik-platform-examples)",
+		"description": "This collection supports the [Platform Operations tutorial series](https://qlik.dev/tutorials/platform-operations-overview). For updates see our [open source repository](https://github.com/qlik-oss/qlik-cloud-examples).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "11630537"
 	},

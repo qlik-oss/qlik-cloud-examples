@@ -14,11 +14,11 @@ Please read and follow our [Code of conduct](https://github.com/qlik-oss/open-so
 
 ## <a name="bugs"></a> Bugs
 
-Bugs can be reported by filing a [new bug issue](https://github.com/qlik-oss/qlik-platform-examples/issues/new?template=bug.md) in the repository. Please make sure to browse through existing [issues](https://github.com/qlik-oss/qlik-platform-examples/labels/bug) before creating a new one.
+Bugs can be reported by filing a [new bug issue](https://github.com/qlik-oss/qlik-cloud-examples/issues/new?template=bug.md) in the repository. Please make sure to browse through existing [issues](https://github.com/qlik-oss/qlik-cloud-examples/labels/bug) before creating a new one.
 
 ## <a name="features"></a> Proposing a change
 
-If you want to propose changes to this project, let us know by [filing a issue](https://github.com/qlik-oss/qlik-platform-examples/issues/new/choose).
+If you want to propose changes to this project, let us know by [filing a issue](https://github.com/qlik-oss/qlik-cloud-examples/issues/new/choose).
 
 ## <a name="git"></a> Git Guidelines
 
