@@ -602,7 +602,74 @@
 					"response": []
 				},
 				{
-					"name": "2.4 Add the user to the target tenant as TenantAdmin",
+					"name": "2.4 Get role id for Tenant Admin role",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.collectionVariables.set(\"target_admin_role\", responseJson.data[0].id);",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{target_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/roles?filter=name eq \"TenantAdmin\"",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"roles"
+							],
+							"query": [
+								{
+									"key": "filter",
+									"value": "name eq \"TenantAdmin\""
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2.5 Add the user to the target tenant as TenantAdmin",
 					"event": [
 						{
 							"listen": "test",
@@ -644,7 +711,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"{{user_name}}\",\n  \"subject\": \"{{idp_subject}}\",\n  \"email\": \"{{email_address}}\",\n  \"roles\": [\"TenantAdmin\"]\n}",
+							"raw": "{\n    \"name\": \"{{user_name}}\",\n    \"subject\": \"{{idp_subject}}\",\n    \"email\": \"{{email_address}}\",\n    \"assignedRoles\": [\n        {\n            \"id\": \"{{target_admin_role}}\"\n        }\n    ]\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1490,7 +1557,7 @@
 			]
 		},
 		{
-			"name": "4 - Deploy applications",
+			"name": "4 - Deploy application",
 			"item": [
 				{
 					"name": "4.1 Get access token for source tenant",
@@ -1644,7 +1711,6 @@
 									"const response = pm.response;\r",
 									"\r",
 									"var headers = response.headers;\r",
-									"console.log(\"repo\", headers);\r",
 									"\r",
 									"for (const pair of Object.entries(headers)) {\r",
 									"   if(`${pair[0]}`=='members'){\r",
@@ -1899,7 +1965,7 @@
 						"body": {
 							"mode": "file",
 							"file": {
-								"src": "/C:/Users/aqh/Downloads/Reload Analyzer v2.0.7.qvf"
+								"src": "Template_App.qvf"
 							}
 						},
 						"url": {
@@ -1996,6 +2062,627 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "5 - Deploy automation",
+			"item": [
+				{
+					"name": "5.1 Get access token for source tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();\r",
+									"\r",
+									"pm.collectionVariables.set(\"source_access_token\", responseJson.access_token);\r",
+									"\r",
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"client_id\":\"{{client_id}}\",\r\n    \"client_secret\":\"{{client_secret}}\",\r\n    \"grant_type\":\"client_credentials\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{source_tenant}}.{{region}}.qlikcloud.com/oauth/token",
+							"protocol": "https",
+							"host": [
+								"{{source_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"oauth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.2 Find source automation id and owner on source tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();\r",
+									"\r",
+									"pm.collectionVariables.set(\"source_automation_id\", responseJson.data[0].id);\r",
+									"pm.collectionVariables.set(\"source_automation_owner\", responseJson.data[0].ownerId);\r",
+									"\r",
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{source_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{source_tenant}}.{{region}}.qlikcloud.com/api/v1/automations?filter=name eq \"{{source_automation_name}}\"",
+							"protocol": "https",
+							"host": [
+								"{{source_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"automations"
+							],
+							"query": [
+								{
+									"key": "filter",
+									"value": "name eq \"{{source_automation_name}}\""
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.3 Get bot user id",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();\r",
+									"\r",
+									"pm.collectionVariables.set(\"source_bot_id\", responseJson.id);\r",
+									"\r",
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true,
+						"followRedirects": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{source_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{source_tenant}}.{{region}}.qlikcloud.com/api/v1/users/me",
+							"protocol": "https",
+							"host": [
+								"{{source_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.4 Change owner of automation to bot user",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(204);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{source_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"userId\": \"{{source_bot_id}}\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{source_tenant}}.{{region}}.qlikcloud.com/api/v1/automations/{{source_automation_id}}/actions/move",
+							"protocol": "https",
+							"host": [
+								"{{source_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"automations",
+								"{{source_automation_id}}",
+								"actions",
+								"move"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.5 Get automation definition",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();\r",
+									"\r",
+									"const responseString = JSON.stringify(responseJson);\r",
+									"\r",
+									"pm.collectionVariables.set(\"source_automation_def\", responseString);\r",
+									"\r",
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{source_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "default"
+							}
+						],
+						"url": {
+							"raw": "https://{{source_tenant}}.{{region}}.qlikcloud.com/api/v1/automations/{{source_automation_id}}",
+							"protocol": "https",
+							"host": [
+								"{{source_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"automations",
+								"{{source_automation_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.6 Change owner of automation to original user",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(204);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{source_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"userId\": \"{{source_automation_owner}}\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{source_tenant}}.{{region}}.qlikcloud.com/api/v1/automations/{{source_automation_id}}/actions/move",
+							"protocol": "https",
+							"host": [
+								"{{source_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"automations",
+								"{{source_automation_id}}",
+								"actions",
+								"move"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.7 Get access token for target tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();\r",
+									"\r",
+									"pm.collectionVariables.set(\"target_access_token\", responseJson.access_token);\r",
+									"\r",
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"client_id\":\"{{client_id}}\",\r\n    \"client_secret\":\"{{client_secret}}\",\r\n    \"grant_type\":\"client_credentials\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/oauth/token",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"oauth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.8 Initial request to automation service",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{target_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/automations",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"automations"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.8 Deploy automation to target tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Correct response to request\", function () {\r",
+									"    pm.response.to.have.status(201);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{target_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{{source_automation_def}}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/automations",
+							"protocol": "https",
+							"host": [
+								"{{target_tenant}}",
+								"{{region}}",
+								"qlikcloud",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"automations"
+							]
+						}
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"event": [
@@ -2079,6 +2766,11 @@
 		{
 			"key": "source_app_name",
 			"value": "Executive Dashboard",
+			"type": "string"
+		},
+		{
+			"key": "source_automation_name",
+			"value": "Webhook assign new user to space",
 			"type": "string"
 		}
 	]
