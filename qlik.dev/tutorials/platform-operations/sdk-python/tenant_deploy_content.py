@@ -134,7 +134,7 @@ def verify_user_access_to_published_app(sdk_client, managed_space_id, published_
     logger.info(
         f"Created a JWT authentication session for a user in group '{constants.GROUP_ANALYTICS_CONSUMER}' in tenant '{sdk_client.config.host}'.")
 
-    # TODO: there's a timing issue when opening a published app, this should be fixed soon.
+    # Retry in case of failure
     retry_count = 0
     while retry_count < 120:
         try:

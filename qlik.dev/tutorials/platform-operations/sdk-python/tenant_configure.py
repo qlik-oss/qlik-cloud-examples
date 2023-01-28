@@ -66,6 +66,7 @@ def configure_jwt_idp(sdk_client, jwt_idp_config):
             "interactive": False,
             "active": True,
             "description": "IdP to handle deferred authentication.",
+            "clockToleranceSec": 5,
             "options": {
                 "jwtLoginEnabled": True,
                 "issuer": jwt_idp_config.issuer,
