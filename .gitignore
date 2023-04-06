@@ -177,4 +177,4 @@ cython_debug/
 *.cer
 
 # Exported files
-*.qvf
+# *.qvf
