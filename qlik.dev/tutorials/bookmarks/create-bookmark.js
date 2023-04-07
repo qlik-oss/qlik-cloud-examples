@@ -4,7 +4,7 @@
 //To create an OAuth client for this snippet, go here:
 //https://qlik.dev/authenticate/oauth/create-oauth-client
 //To use a sample app with this snippet, download and import the executive
-//dashboard from this github location
+//dashboard from this github location https://github.com/qlik-oss/qlik-cloud-examples/raw/main/qlik.dev/sample-apps/qlik-dev-exec-dashboard.qvf
 /*PARAMS
 * host: the hostname of your tenant
 * clientId: the clientId of the OAuth2 client you created
