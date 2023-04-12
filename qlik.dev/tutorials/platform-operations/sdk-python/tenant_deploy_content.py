@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def verify_bot_access_to_source_app(sdk_client, app_id):
-    user_id = sdk_client.users.get_me()["id"]
+    user_id = sdk_client.users.get_me().id
 
     app = sdk_client.apps.get(app_id)
     logger.info(f"Retrieved the app with ID '{app_id}' from tenant '{sdk_client.config.host}'.")
@@ -134,7 +134,7 @@ def verify_user_access_to_published_app(sdk_client, managed_space_id, published_
     logger.info(
         f"Created a JWT authentication session for a user in group '{constants.GROUP_ANALYTICS_CONSUMER}' in tenant '{sdk_client.config.host}'.")
 
-    # TODO: there's a timing issue when opening a published app, this should be fixed soon.
+    # Retry in case of failure
     retry_count = 0
     while retry_count < 120:
         try:
@@ -166,6 +166,7 @@ def run(source_tenant_sdk_client, source_app_id, target_tenant_sdk_client, targe
         try:
             imported_app = import_app(target_tenant_sdk_client, exported_app_file, target_shared_space_id)
         finally:
+            exported_app_file.close()
             os.remove(exported_app_file.name)
 
     published_app = publish_app(target_tenant_sdk_client, imported_app, target_managed_space_id)

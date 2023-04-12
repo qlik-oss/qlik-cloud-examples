@@ -23,7 +23,7 @@ def get_tenant_id(sdk_client):
     user = sdk_client.users.get_me()
 
     logger.info(f"Retrieved tenant ID from tenant '{sdk_client.config.host}'.")
-    return user["tenantId"]
+    return user.tenantId
 
 
 def enable_auto_group_creation(sdk_client):
@@ -66,6 +66,7 @@ def configure_jwt_idp(sdk_client, jwt_idp_config):
             "interactive": False,
             "active": True,
             "description": "IdP to handle deferred authentication.",
+            "clockToleranceSec": 5,
             "options": {
                 "jwtLoginEnabled": True,
                 "issuer": jwt_idp_config.issuer,
