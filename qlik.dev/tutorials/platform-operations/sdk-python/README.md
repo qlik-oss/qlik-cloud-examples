@@ -1,6 +1,6 @@
 ## Qlik Python SDK Examples
 
-Example Python implementations of various tutorials from [Qlik Platform Operations tutorials](https://qlik.dev/tutorials#platform-operations) on [qlik.dev](http://qlik.dev).
+Example Python implementations of various tutorials from [Qlik Platform Operations tutorials](https://qlik.dev/manage/platform-operations/overview) on [qlik.dev](http://qlik.dev).
 
 ### Prerequisites
 * Python 3.8 or higher

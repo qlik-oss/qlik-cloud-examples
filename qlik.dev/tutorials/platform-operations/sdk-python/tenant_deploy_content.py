@@ -1,5 +1,5 @@
 """
-Implementation of the 'Deploy a Qlik Sense application to a tenant' tutorial from https://qlik.dev/tutorials/deploy-a-qlik-sense-application-to-a-tenant
+Implementation of the 'Deploy a Qlik Sense application to a tenant' tutorial from https://qlik.dev/manage/platform-operations/deploy-content-to-a-tenant
 
 For a detailed overview of the supported arguments execute:
 

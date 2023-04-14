@@ -1,9 +1,9 @@
 """
 End to end implementation of the following tutorials:
 
-* 'Create a tenant' tutorial from https://qlik.dev/tutorials/create-a-tenant
-* 'Configure a tenant' tutorial from https://qlik.dev/tutorials/configure-a-tenant
-* 'Deploy a Qlik Sense application to a tenant' tutorial from https://qlik.dev/tutorials/deploy-a-qlik-sense-application-to-a-tenant
+* 'Create a tenant' tutorial from https://qlik.dev/manage/platform-operations/create-a-tenant
+* 'Configure a tenant' tutorial from https://qlik.dev/manage/platform-operations/configure-a-tenant
+* 'Deploy a Qlik Sense application to a tenant' tutorial from https://qlik.dev/manage/platform-operations/deploy-content-to-a-tenant
 
 For a detailed overview of the supported arguments execute:
 

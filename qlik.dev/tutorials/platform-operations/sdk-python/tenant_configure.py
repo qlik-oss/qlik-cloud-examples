@@ -1,5 +1,5 @@
 """
-Implementation of the 'Configure a tenant' tutorial from https://qlik.dev/tutorials/configure-a-tenant
+Implementation of the 'Configure a tenant' tutorial from https://qlik.dev/manage/platform-operations/configure-a-tenant
 
 For a detailed overview of the supported arguments execute:
 
