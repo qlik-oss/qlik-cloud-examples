@@ -1,6 +1,6 @@
 ## API Collection Examples (Postman Example)
 
-Example [Postman](https://www.postman.com/) API collection which demonstrates various tutorials from [Qlik Platform Operations tutorials](https://qlik.dev/tutorials#platform-operations) on [qlik.dev](http://qlik.dev).
+Example [Postman](https://www.postman.com/) API collection which demonstrates various tutorials from [Qlik Platform Operations tutorials](https://qlik.dev/manage/platform-operations/overview) on [qlik.dev](http://qlik.dev).
 
 > **Note:** The example collection demonstrates the calls as documented, and as they do not abstract or automate activities like generating the access token from the OAuth clients - there will be repetition.
 

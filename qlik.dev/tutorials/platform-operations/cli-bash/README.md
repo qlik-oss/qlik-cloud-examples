@@ -1,6 +1,6 @@
 ## Qlik CLI Examples
 
-Example [Qlik CLI](https://qlik.dev/libraries-and-tools/qlik-cli) implementations of various tutorials from [Qlik Platform Operations tutorials](https://qlik.dev/tutorials#platform-operations) on [qlik.dev](http://qlik.dev).
+Example [Qlik CLI](https://qlik.dev/libraries-and-tools/qlik-cli) implementations of various tutorials from [Qlik Platform Operations tutorials](https://qlik.dev/manage/platform-operations/overview) on [qlik.dev](http://qlik.dev).
 
 ### Prerequisites
 * Bash 5.1 or higher
