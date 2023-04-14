@@ -18,6 +18,7 @@
 const Qlik = require('@qlik/sdk').default;
 const { AuthType } = require("@qlik/sdk");
 
+//config-values
 const host = process.env['host'] // "<tenant.region.qlikcloud.com>";
 const clientId = process.env['clientId'] // "<OAUTH_CLIENT_ID>";
 const clientSecret = process.env['clientSecret'] //"<OAUTH_CLIENT_SECRET>";
@@ -44,7 +45,7 @@ const config =  {
 
   const sessObj = await app.createSessionObject({
       "qInfo": {
-        "qType": "SelectionList"
+        "qType": "CurrentSelections"
       },
       "qSelectionObjectDef": {}
     }
@@ -58,7 +59,6 @@ const config =  {
     const listLayout = await myListObj.getLayout();
     for (const pages of listLayout.qListObject.qDataPages)
       {
-        
         for (const val of pages.qMatrix)
           {
             console.log(val[0].qText);
