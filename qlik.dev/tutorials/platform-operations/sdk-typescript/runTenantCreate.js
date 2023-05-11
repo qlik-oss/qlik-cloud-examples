@@ -1,9 +1,16 @@
+const fs = require('fs');
 const yargs = require('yargs');
+const dotenv = require('dotenv');
 const { createSdkClient } = require('./qlik-sdk-helper');
 const { runTenantCreate } = require('./tenant_create');
 
 (async () => {
-  const { argv } = yargs(process.argv.slice(2))
+  // Read args from .env file if it exists, otherwise from args
+  let argsSource = {};
+  if (fs.existsSync('.env')) {
+    argsSource = dotenv.config({ path: '.env' }).parsed;
+  } else {
+    argsSource = yargs(process.argv.slice(2))
     .usage('Create a tenant\n\nUsage: $0 [options]')
     .help('help').alias('help', 'h')
     .describe({
@@ -19,7 +26,8 @@ const { runTenantCreate } = require('./tenant_create');
       'sourceTenantUrl',
       'registrationTenantUrl',
       'sourceTenantAdminEmail',
-    ]);
+    ]).argv;
+  }
 
   const {
     clientId,
@@ -27,13 +35,11 @@ const { runTenantCreate } = require('./tenant_create');
     sourceTenantUrl,
     registrationTenantUrl,
     sourceTenantAdminEmail,
-  } = argv;
-
+  } = argsSource;
+  
   const sourceTenantClient = await createSdkClient(clientId, clientSecret, sourceTenantUrl);
   const registrationClient = await createSdkClient(clientId, clientSecret, registrationTenantUrl);
 
-  const result = await runTenantCreate({
-    sourceTenantClient, registrationClient, clientId, clientSecret, sourceTenantAdminEmail,
-  });
-  console.log(result);
+  const result = await runTenantCreate(sourceTenantClient, registrationClient, clientId, clientSecret, sourceTenantAdminEmail);
+  //console.log(result);
 })();

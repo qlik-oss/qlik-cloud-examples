@@ -47,15 +47,13 @@ async function createTenantAdmin(sourceTenantClient, targetTenantClient, tenantA
     name: sourceTenantAdminUser.name,
     email: sourceTenantAdminUser.email,
     subject: sourceTenantAdminUser.subject,
-    assignedRoles: [{ id: targetTenantAdminRole.roleId }],
+    assignedRoles: [{ id: targetTenantAdminRole.id }],
   });
 
   console.info(`Created tenant admin user for user with email '${tenantAdminMail}' with ID '${user.id}' in tenant '${targetTenantClient.auth.config.host}'.`);
 }
 
-async function runTenantCreate({
-  sourceTenantClient, registrationClient, oauthClientId, oauthSecret, sourceTenantAdminEmail,
-}) {
+async function runTenantCreate(sourceTenantClient, registrationClient, oauthClientId, oauthSecret, sourceTenantAdminEmail) {
   const licenseKey = await getSignedEntitlementKey(sourceTenantClient);
   const { tenantId, tenantHostname } = await createTenant(registrationClient, licenseKey);
   const targetTenantClient = await createSdkClient(oauthClientId, oauthSecret, tenantHostname);

@@ -20,10 +20,10 @@ Read args from .env file if it exists, otherwise from args
 
 ### Run
 
-* [Create a tenant](https://qlik.dev/tutorials/create-a-tenant), example usage, (Not tested):
+* [Create a tenant](https://qlik.dev/tutorials/create-a-tenant), example usage:
 
 ```bash
-node runTenantConfigure.js \
+node runTenantCreate.js \
   --sourceTenantUrl <HOSTNAME> \
   --registrationTenantUrl <HOSTNAME> \
   --sourceTenantAdminEmail <admin email> \
@@ -47,7 +47,7 @@ node runTenantConfigure.js \
 * [Deploy a Qlik Sense application to a tenant](https://qlik.dev/tutorials/deploy-a-qlik-sense-application-to-a-tenant), example usage:
 
 ```bash
-node runTenantConfigure.js \
+node runTenantDeploy.js \
   --sourceTenantUrl <HOSTNAME> \
   --sourceTenantApiKey <API Key> \
   --sourceAppId <APP ID> \
