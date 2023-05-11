@@ -49,10 +49,8 @@ node runTenantConfigure.js \
 ```bash
 node runTenantDeploy.js \
   --sourceTenantUrl <HOSTNAME> \
-  --sourceTenantApiKey <API Key> \
   --sourceAppId <APP ID> \
   --targetTenantUrl <HOSTNAME> \
-  --targetManagedSpaceId <Space Id>
   --clientId <CLIENT_ID> \
   --clientSecret <CLIENT_SECRET> \
   --jwtIssuer <ISSUER> \
