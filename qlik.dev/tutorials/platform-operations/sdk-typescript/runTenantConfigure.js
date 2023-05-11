@@ -54,5 +54,5 @@ const { runTenantConfigure } = require('./tenant_configure');
   };
 
   const result = await runTenantConfigure(sdkClient, jwtConfig);
-  console.log(result);
+  //console.log(result);
 })();

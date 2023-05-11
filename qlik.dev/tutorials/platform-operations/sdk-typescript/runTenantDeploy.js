@@ -18,10 +18,8 @@ const { runTenantDeployContent } = require('./tenant_deploy_content');
         clientId: 'OAuth Client ID',
         clientSecret: 'OAuth Client Secret',
         sourceTenantUrl: 'The hostname of the tenant, for example: tenant.region.qlikcloud.com',
-        sourceTenantApiKey: 'An API key from the source tenant',
         targetTenantUrl: 'The hostname of the tenant, for example: tenant.region.qlikcloud.com',
         sourceAppId: 'source app id',
-        targetManagedSpaceId: 'target managed space id',
         jwtIssuer: "The 'issuer' field to use in the JWT.",
         jwtKeyId: "The 'kid' field to use in the JWT.",
         jwtPrivateKeyFilePath: 'The path to the local private key file.',
@@ -31,10 +29,8 @@ const { runTenantDeployContent } = require('./tenant_deploy_content');
         'clientId',
         'clientSecret',
         'sourceTenantUrl',
-        'sourceTenantApiKey',
         'targetTenantUrl',
         'sourceAppId',
-        'targetManagedSpaceId',
         'jwtIssuer',
         'jwtKeyId',
         'jwtPrivateKeyFilePath',
@@ -47,21 +43,15 @@ const { runTenantDeployContent } = require('./tenant_deploy_content');
     clientId,
     clientSecret,
     sourceTenantUrl,
-    sourceTenantApiKey,
     targetTenantUrl,
     sourceAppId,
-    targetManagedSpaceId,
     jwtIssuer,
     jwtKeyId,
     jwtPrivateKeyFilePath,
     jwtPublicKeyFilePath,
   } = argsSource;
 
-  const sourceTenantClient = new Qlik({
-    host: sourceTenantUrl,
-    authType: AuthType.APIKey,
-    apiKey: sourceTenantApiKey,
-  });
+  const sourceTenantClient = await createSdkClient(clientId, clientSecret, sourceTenantUrl);
   const targetTenantClient = await createSdkClient(clientId, clientSecret, targetTenantUrl);
   const jwtPrivateKey = fs.readFileSync(jwtPrivateKeyFilePath, 'utf8');
   const jwtPublicKey = fs.readFileSync(jwtPublicKeyFilePath, 'utf8');
@@ -73,6 +63,6 @@ const { runTenantDeployContent } = require('./tenant_deploy_content');
   };
 
   await runTenantDeployContent({
-    sourceTenantClient, sourceAppId, targetTenantClient, targetManagedSpaceId, jwtConfig,
+    sourceTenantClient, sourceAppId, targetTenantClient, jwtConfig,
   });
 })();
