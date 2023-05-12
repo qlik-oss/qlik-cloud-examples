@@ -1,0 +1,21 @@
+{
+  "name": "sdk-typescript-script",
+  "version": "1.0.0",
+  "description": "Qlik Platform Operations script example",
+  "main": "tenant_end_to_end.js",
+  "scripts": {
+    "lint:fix": "eslint . --fix --quiet"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@qlik/sdk": "0.13.0",
+    "dotenv": "16.0.3",
+    "yargs": "17.5.1"
+  },
+  "devDependencies": {
+    "eslint": "8.24.0",
+    "eslint-config-airbnb-base": "15.0.0",
+    "eslint-plugin-import": "2.26.0"
+  }
+}
