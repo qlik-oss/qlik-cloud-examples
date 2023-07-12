@@ -1,6 +1,6 @@
 ---
-name: 🚀 Feature or Improvement
-about: Suggest an idea for this project
+name: qlik-oss/qlik-cloud-examples - 🚀 Feature or Improvement
+about: Suggest an idea for the scripts in this repository
 ---
 
 ## 🚀 Feature

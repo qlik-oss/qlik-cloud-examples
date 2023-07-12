@@ -1,6 +1,6 @@
 ---
-name: 🐛 Bug Report
-about: Something isn't working as expected. 😕
+name: qlik-oss/qlik-cloud-examples - 🐛 Bug Report
+about: Something isn't working as expected with one of the scripts in this repository 😕
 ---
 
 ## 🐛 Bug report
