@@ -1,5 +1,5 @@
 ---
-name: 🔨 An example on qlik.dev needs help
+name: qlik.dev - 🔨 An example on qlik.dev needs help
 about: One of the examples at qlik.dev/examples doesn't work, or needs improvement
 ---
 
