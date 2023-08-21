@@ -1,8 +1,8 @@
 {
 	"info": {
 		"_postman_id": "ecbb73f9-cb2d-4af6-94ef-f9fa841f7f00",
-		"name": "Platform Operations Example",
-		"description": "This collection supports the [Platform Operations tutorial series](https://qlik.dev/tutorials/platform-operations-overview). For updates see our [open source repository](https://github.com/qlik-oss/qlik-cloud-examples).",
+		"name": "Platform Operations Example v2.0.0",
+		"description": "For more information, refer to [https://github.com/qlik-oss/qlik-cloud-examples](https://github.com/qlik-oss/qlik-cloud-examples)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "11630537"
 	},
@@ -339,7 +339,7 @@
 							"script": {
 								"exec": [
 									"pm.test(\"Correct response to request\", function () {\r",
-									"    pm.response.to.have.status(301);\r",
+									"    pm.response.to.have.status(200);\r",
 									"});"
 								],
 								"type": "text/javascript"
@@ -602,74 +602,7 @@
 					"response": []
 				},
 				{
-					"name": "2.4 Get role id for Tenant Admin role",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"const responseJson = pm.response.json();",
-									"",
-									"pm.collectionVariables.set(\"target_admin_role\", responseJson.data[0].id);",
-									"",
-									"pm.test(\"Correct response to request\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{target_access_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/roles?filter=name eq \"TenantAdmin\"",
-							"protocol": "https",
-							"host": [
-								"{{target_tenant}}",
-								"{{region}}",
-								"qlikcloud",
-								"com"
-							],
-							"path": [
-								"api",
-								"v1",
-								"roles"
-							],
-							"query": [
-								{
-									"key": "filter",
-									"value": "name eq \"TenantAdmin\""
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "2.5 Add the user to the target tenant as TenantAdmin",
+					"name": "2.4 Add the user to the target tenant as TenantAdmin",
 					"event": [
 						{
 							"listen": "test",
@@ -711,7 +644,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"{{user_name}}\",\n    \"subject\": \"{{idp_subject}}\",\n    \"email\": \"{{email_address}}\",\n    \"assignedRoles\": [\n        {\n            \"id\": \"{{target_admin_role}}\"\n        }\n    ]\n}",
+							"raw": "{\n    \"name\": \"{{user_name}}\",\n    \"subject\": \"{{idp_subject}}\",\n    \"email\": \"{{email_address}}\",\n    \"assignedRoles\": [\n        {\n            \"name\": \"TenantAdmin\"\n        }\n    ]\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -939,81 +872,8 @@
 					"response": []
 				},
 				{
-					"name": "3.4 Get target tenant id",
+					"name": "3.4 Create new group",
 					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"const responseJson = pm.response.json();\r",
-									"\r",
-									"pm.collectionVariables.set(\"target_tenant_id\", responseJson.data[0].id);\r",
-									"\r",
-									"pm.test(\"Correct response to request\", function () {\r",
-									"    pm.response.to.have.status(200);\r",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{target_access_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/tenants",
-							"protocol": "https",
-							"host": [
-								"{{target_tenant}}",
-								"{{region}}",
-								"qlikcloud",
-								"com"
-							],
-							"path": [
-								"api",
-								"v1",
-								"tenants"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "3.5 Load external library to create JWT*",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code should be 200\", function () {",
-									"    pm.response.to.have.status(200)",
-									"    pm.collectionVariables.set(\"pmlib_code\", responseBody)",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						},
 						{
 							"listen": "prerequest",
 							"script": {
@@ -1022,77 +882,13 @@
 								],
 								"type": "text/javascript"
 							}
-						}
-					],
-					"protocolProfileBehavior": {
-						"disableBodyPruning": true
-					},
-					"request": {
-						"method": "GET",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": ""
-						},
-						"url": {
-							"raw": "https://joolfe.github.io/postman-util-lib/dist/bundle.js",
-							"protocol": "https",
-							"host": [
-								"joolfe",
-								"github",
-								"io"
-							],
-							"path": [
-								"postman-util-lib",
-								"dist",
-								"bundle.js"
-							]
-						},
-						"description": "Load the postman-util-lib from github.io and load into postman global variable."
-					},
-					"response": []
-				},
-				{
-					"name": "3.6 Create JWT IDP for seeding groups",
-					"event": [
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									"\r",
-									"eval( pm.collectionVariables.get('pmlib_code') );\r",
-									"var jwtSecret = pm.collectionVariables.get('private_key');\r",
-									"\r",
-									"var payload = {\r",
-									"  \"sub\": \"tmpgroupprovisioning\",\r",
-									"  \"subType\": \"user\",\r",
-									"  \"name\": \"temporary group user\",\r",
-									"  \"email\": \"noreply@qlik.com\",\r",
-									"  \"email_verified\": false,\r",
-									"  \"groups\": pm.collectionVariables.get('group'),\r",
-									"  \"aud\": \"qlik.api/login/jwt-session\",\r",
-									"  \"iss\": pm.collectionVariables.get('issuer')\r",
-									"}\r",
-									"\r",
-									"var alg ='RS256';\r",
-									"var kid = pm.collectionVariables.get('key_id');\r",
-									"\r",
-									"var jwt_token = pmlib.createJws(jwtSecret, payload, {}, exp=600, alg, kid);\r",
-									"\r",
-									"pm.collectionVariables.set('jwt_token', jwt_token);"
-								],
-								"type": "text/javascript"
-							}
 						},
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
-									"const responseJson = pm.response.json();\r",
-									"\r",
-									"pm.collectionVariables.set(\"jwt_idp_id\", responseJson.id);\r",
-									"\r",
-									"pm.collectionVariables.unset(\"pmlib_code\");\r",
+									"var responseJson = JSON.parse(responseBody);\r",
+									"pm.collectionVariables.set('group_id', responseJson.id);\r",
 									"\r",
 									"pm.test(\"Correct response to request\", function () {\r",
 									"    pm.response.to.have.status(201);\r",
@@ -1126,206 +922,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"provider\": \"external\",\r\n  \"interactive\": false,\r\n  \"active\": true,\r\n  \"protocol\": \"jwtAuth\",\r\n  \"tenantIds\": [\r\n    \"{{target_tenant_id}}\"\r\n  ],\r\n  \"options\": {\r\n    \"staticKeys\": [\r\n      {\r\n        \"pem\": \"{{public_key}}\",\r\n        \"kid\": \"{{key_id}}\"\r\n      }\r\n    ],\r\n    \"issuer\": \"{{issuer}}\"\r\n  }\r\n}"
+							"raw": "{\n  \"name\": \"{{group}}\"\n}"
 						},
 						"url": {
-							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/identity-providers",
-							"protocol": "https",
-							"host": [
-								"{{target_tenant}}",
-								"{{region}}",
-								"qlikcloud",
-								"com"
-							],
-							"path": [
-								"api",
-								"v1",
-								"identity-providers"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "3.7 Impersonate login to create groups",
-					"event": [
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript"
-							}
-						},
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Correct response to request\", function () {\r",
-									"    pm.response.to.have.status(200);\r",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							},
-							{
-								"key": "Content-type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": ""
-						},
-						"url": {
-							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/login/jwt-session",
-							"protocol": "https",
-							"host": [
-								"{{target_tenant}}",
-								"{{region}}",
-								"qlikcloud",
-								"com"
-							],
-							"path": [
-								"login",
-								"jwt-session"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "3.8 Delete JWT IDP used for seeding groups",
-					"event": [
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript"
-							}
-						},
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.collectionVariables.unset(\"jwt_idp_id\");\r",
-									"pm.collectionVariables.unset(\"jwt_token\");\r",
-									"\r",
-									"pm.test(\"Correct response to request\", function () {\r",
-									"    pm.response.to.have.status(204);\r",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{target_access_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							},
-							{
-								"key": "Content-type",
-								"value": "application/json"
-							}
-						],
-						"url": {
-							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/identity-providers/{{jwt_idp_id}}",
-							"protocol": "https",
-							"host": [
-								"{{target_tenant}}",
-								"{{region}}",
-								"qlikcloud",
-								"com"
-							],
-							"path": [
-								"api",
-								"v1",
-								"identity-providers",
-								"{{jwt_idp_id}}"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "3.9 Retrieve group id from target tenant",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"let groups = JSON.parse(responseBody).data;\r",
-									"\r",
-									"pm.collectionVariables.set('group_id', groups[0].id);\r",
-									"\r",
-									"pm.test(\"Correct response to request\", function () {\r",
-									"    pm.response.to.have.status(200);\r",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{target_access_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/groups?filter=name eq \"{{group}}\"",
+							"raw": "https://{{target_tenant}}.{{region}}.qlikcloud.com/api/v1/groups",
 							"protocol": "https",
 							"host": [
 								"{{target_tenant}}",
@@ -1337,19 +937,13 @@
 								"api",
 								"v1",
 								"groups"
-							],
-							"query": [
-								{
-									"key": "filter",
-									"value": "name eq \"{{group}}\""
-								}
 							]
 						}
 					},
 					"response": []
 				},
 				{
-					"name": "3.10 Create Shared Space",
+					"name": "3.5 Create Shared Space",
 					"event": [
 						{
 							"listen": "test",
@@ -1418,7 +1012,7 @@
 					"response": []
 				},
 				{
-					"name": "3.11 Create Managed Space",
+					"name": "3.6 Create Managed Space",
 					"event": [
 						{
 							"listen": "test",
@@ -1487,7 +1081,7 @@
 					"response": []
 				},
 				{
-					"name": "3.12 Assign group to managed space",
+					"name": "3.7 Assign group to managed space",
 					"event": [
 						{
 							"listen": "test",
@@ -2726,26 +2320,6 @@
 		{
 			"key": "email_address",
 			"value": "<qlik-account-email-address>",
-			"type": "string"
-		},
-		{
-			"key": "key_id",
-			"value": "key1",
-			"type": "string"
-		},
-		{
-			"key": "issuer",
-			"value": "mytenant.eu.qlikcloud.com",
-			"type": "string"
-		},
-		{
-			"key": "public_key",
-			"value": "<public-key-of-your-key-pair>",
-			"type": "string"
-		},
-		{
-			"key": "private_key",
-			"value": "<private-key-of-your-key-pair>",
 			"type": "string"
 		},
 		{
