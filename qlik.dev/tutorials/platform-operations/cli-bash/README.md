@@ -67,3 +67,9 @@ Example [Qlik CLI](https://qlik.dev/libraries-and-tools/qlik-cli) implementation
       --jwt-private-key ./privatekey.pem \ 
       --jwt-public-key ./publickey.cer
     ```
+
+* [Delete a tenant](https://qlik.dev/manage/platform-operations/delete-a-tenant), example usage:
+
+    ```bash
+    ./tenant_delete.sh \
+    ```
