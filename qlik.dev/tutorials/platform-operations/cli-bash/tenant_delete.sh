@@ -32,11 +32,50 @@ function get_tenant_id() {
   echo "INFO: Retrieved tenant ID from tenant '${TARGET_TENANT_HOSTNAME}'."
 }
 
+function delete_tenant () {
+    #To delete a tenant it first goes through a state of deactivation therefore you start by first deactivating the tenant then it eventually gets deleted. 
+    qlik context use "${TARGET_TENANT_HOSTNAME}" > /dev/null
+    if ! tenant=$(qlik tenant delete "${target_tenant_id}" --json)
+    then
+        echo "ERROR: Failed to delete tenant using '${target_tenant_id}'."
+        exit 1
+    else
+    tenant= if ! purge_after_days=null $(--purgeAfterDays "${purge_after_days}"  )
+    else 
+    readonly purge_after_days="${purge_after_days}" 
+    fi
+
+    echo "INFO: Tenant deactivated '${TARGET_TENANT_HOSTNAME}' with ID '${target_tenant_id}' and will be deleted within '${purge_after_days}'."
+}
+
 function run() {
   check_required_vars
 
   setup_cli_contexts
   qlik context use "${TARGET_TENANT_HOSTNAME}" > /dev/null
-
   get_tenant_id
+
+   if ! qlik tenant delete \
+
 }
+
+function parse_script_args() {
+  while (( "$#" )); do
+    case "$1" in
+      --help)
+        usage
+        exit 0
+        ;;
+    esac
+  done
+}
+if [ -z "${SOURCE_FUNCTIONS_ONLY}" ] ; then
+  if ! ./check-prerequisites.sh;
+  then
+    echo "ERROR: Some prerequisites have not been installed."
+    exit 1
+  fi
+
+  parse_script_args "$@"
+  run "$@"
+fi
