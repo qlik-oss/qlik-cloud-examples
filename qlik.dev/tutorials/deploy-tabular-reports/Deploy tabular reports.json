@@ -1,0 +1,941 @@
+{
+	"info": {
+		"_postman_id": "5c7cb281-71b1-46d9-b9ee-83d27367dbdd",
+		"name": "Reporting Service - Migrate report to new app",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "11630537"
+	},
+	"item": [
+		{
+			"name": "Prepare credential and target space",
+			"item": [
+				{
+					"name": "01 Retrieve access token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.collectionVariables.set(\"tempBearerToken\", responseJson.access_token);",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"client_id\":\"{{clientId}}\",\n    \"client_secret\":\"{{clientSecret}}\",\n    \"grant_type\":\"client_credentials\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/oauth/token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"oauth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "02 Retrieve current user id",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.collectionVariables.set(\"tempCurrentUserId\", responseJson.id);",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/users/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "03 Establish access to source app",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.collectionVariables.set(\"tempSourceSpaceId\", responseJson.data[0].spaceId);",
+									"",
+									"function assignToSpace(spaceId) {",
+									"    var body = JSON.stringify({",
+									"        \"type\": \"user\",",
+									"        \"roles\": [\"facilitator\"],",
+									"        \"assigneeId\": pm.collectionVariables.get(\"tempCurrentUserId\")",
+									"    });",
+									"    ",
+									"    pm.sendRequest({",
+									"                url: pm.collectionVariables.get(\"baseUrl\") + '/api/v1/spaces/' + spaceId + '/assignments',",
+									"                method: 'POST',",
+									"                header: {",
+									"                    'accept': 'application/json',",
+									"                    'content-type': 'application/json',",
+									"                    'Authorization': 'Bearer ' + pm.collectionVariables.get(\"tempBearerToken\")",
+									"                },",
+									"                body: body",
+									"            }, function (err, res) {",
+									"                // Check for a 200 to indicate creation successful",
+									"            })",
+									"}",
+									"",
+									"var actions = responseJson.data[0].actions;",
+									"",
+									"if (!actions.includes(\"duplicate\")) {",
+									"    pm.sendRequest({",
+									"        url: pm.collectionVariables.get(\"baseUrl\") + '/api/v1/spaces/' + pm.collectionVariables.get(\"tempSourceSpaceId\") + '/assignments',",
+									"        method: 'GET',",
+									"        header: {",
+									"            'accept': 'application/json',",
+									"            'content-type': 'application/json',",
+									"            'Authorization': 'Bearer ' + pm.collectionVariables.get(\"tempBearerToken\")",
+									"        }",
+									"    }, function (err, res) {",
+									"        const assignmentResponse = res.json();",
+									"        const assignmentResponseData = assignmentResponse.data;",
+									"        function isCurrentUser(assignment) {",
+									"            return assignment.assigneeId === pm.collectionVariables.get(\"tempCurrentUserId\");",
+									"        }",
+									"        const assignment = assignmentResponseData.find(isCurrentUser);",
+									"        if (assignment != null) {",
+									"            pm.sendRequest({",
+									"                url: pm.collectionVariables.get(\"baseUrl\") + '/api/v1/spaces/' + pm.collectionVariables.get(\"tempSourceSpaceId\") + '/assignments/' + assignment.id,",
+									"                method: 'DELETE',",
+									"                header: {",
+									"                    'accept': 'application/json',",
+									"                    'content-type': 'application/json',",
+									"                    'Authorization': 'Bearer ' + pm.collectionVariables.get(\"tempBearerToken\")",
+									"                }",
+									"            }, function (err, res) {",
+									"                // Check for a 204 to indicate delete successful",
+									"                assignToSpace(pm.collectionVariables.get(\"tempSourceSpaceId\"));",
+									"                // expect 201",
+									"            })",
+									"        } else {",
+									"            assignToSpace(pm.collectionVariables.get(\"tempSourceSpaceId\"));",
+									"            // expect 201",
+									"        }",
+									"    });",
+									"}",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"attributes\": {\n    \"spaceId\": \"{{targetSpaceId}}\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/items?resourceId={{sourceAppId}}&resourceType=app",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"items"
+							],
+							"query": [
+								{
+									"key": "resourceId",
+									"value": "{{sourceAppId}}"
+								},
+								{
+									"key": "resourceType",
+									"value": "app"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "04 Establish access to target space",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"var assignedRoles = responseJson.meta.roles;",
+									"",
+									"function assignToSpace(spaceId) {",
+									"    var body = JSON.stringify({",
+									"        \"type\": \"user\",",
+									"        \"roles\": [\"facilitator\"],",
+									"        \"assigneeId\": pm.collectionVariables.get(\"tempCurrentUserId\")",
+									"    });",
+									"    ",
+									"    pm.sendRequest({",
+									"                url: pm.collectionVariables.get(\"baseUrl\") + '/api/v1/spaces/' + spaceId + '/assignments',",
+									"                method: 'POST',",
+									"                header: {",
+									"                    'accept': 'application/json',",
+									"                    'content-type': 'application/json',",
+									"                    'Authorization': 'Bearer ' + pm.collectionVariables.get(\"tempBearerToken\")",
+									"                },",
+									"                body: body",
+									"            }, function (err, res) {",
+									"                // Check for a 200 to indicate creation successful",
+									"            })",
+									"}",
+									"",
+									"if (!assignedRoles.includes(\"facilitator\")) {",
+									"    pm.sendRequest({",
+									"        url: pm.collectionVariables.get(\"baseUrl\") + '/api/v1/spaces/' + pm.collectionVariables.get(\"targetSpaceId\") + '/assignments',",
+									"        method: 'GET',",
+									"        header: {",
+									"            'accept': 'application/json',",
+									"            'content-type': 'application/json',",
+									"            'Authorization': 'Bearer ' + pm.collectionVariables.get(\"tempBearerToken\")",
+									"        }",
+									"    }, function (err, res) {",
+									"        const assignmentResponse = res.json();",
+									"        const assignmentResponseData = assignmentResponse.data;",
+									"        function isCurrentUser(assignment) {",
+									"            return assignment.assigneeId === pm.collectionVariables.get(\"tempCurrentUserId\");",
+									"        }",
+									"        const assignment = assignmentResponseData.find(isCurrentUser);",
+									"        if (assignment != null) {",
+									"            pm.sendRequest({",
+									"                url: pm.collectionVariables.get(\"baseUrl\") + '/api/v1/spaces/' + pm.collectionVariables.get(\"targetSpaceId\") + '/assignments/' + assignment.id,",
+									"                method: 'DELETE',",
+									"                header: {",
+									"                    'accept': 'application/json',",
+									"                    'content-type': 'application/json',",
+									"                    'Authorization': 'Bearer ' + pm.collectionVariables.get(\"tempBearerToken\")",
+									"                }",
+									"            }, function (err, res) {",
+									"                // Check for a 204 to indicate delete successful",
+									"                assignToSpace(pm.collectionVariables.get(\"targetSpaceId\"));",
+									"                // expect 201",
+									"            })",
+									"        } else {",
+									"            assignToSpace(pm.collectionVariables.get(\"targetSpaceId\"));",
+									"            // expect 201",
+									"        }",
+									"    });",
+									"}",
+									"",
+									"",
+									"",
+									"//pm.collectionVariables.set(\"tempTargetAppId\", responseJson.attributes.id);",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"attributes\": {\n    \"spaceId\": \"{{targetSpaceId}}\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/spaces/{{targetSpaceId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"spaces",
+								"{{targetSpaceId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Migrate content",
+			"item": [
+				{
+					"name": "01 Export app",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const response = pm.response;",
+									"var headers = response.headers;",
+									"",
+									"for (const pair of Object.entries(headers)) {",
+									"   if(`${pair[0]}`=='members'){",
+									"       pm.collectionVariables.set('tempTempContAppId', `${pair[1]}`.split('Location: ')[1].split(',')[0])",
+									"   }",
+									"}",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/apps/{{sourceAppId}}/export",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"apps",
+								"{{sourceAppId}}",
+								"export"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "02 Download app from temp-contents",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {}
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{tempTempContAppId}}",
+							"host": [
+								"{{baseUrl}}{{tempTempContAppId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "03 Import app",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.collectionVariables.set(\"tempTargetAppId\", responseJson.attributes.id);",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "file",
+							"file": {
+								"src": "Reporting App.qvf"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/apps/import?spaceId={{targetSpaceId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"apps",
+								"import"
+							],
+							"query": [
+								{
+									"key": "spaceId",
+									"value": "{{targetSpaceId}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "04 Get first report template for the app",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.collectionVariables.set(\"tempTemplateId\", responseJson.data[0].id);",
+									"pm.collectionVariables.set(\"tempTemplateName\", responseJson.data[0].name);",
+									"pm.collectionVariables.set(\"tempTemplateDescription\", responseJson.data[0].description);",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/report-templates?sourceAppId={{sourceAppId}}&limit=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"report-templates"
+							],
+							"query": [
+								{
+									"key": "sourceAppId",
+									"value": "{{sourceAppId}}"
+								},
+								{
+									"key": "limit",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "05 Download report template",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {}
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"executionTimestamp\": 1678367196\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/report-templates/{{tempTemplateId}}/actions/download",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"report-templates",
+								"{{tempTemplateId}}",
+								"actions",
+								"download"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "06 Import report template to temp contents",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.headers;",
+									"",
+									"function isLocation(header) {",
+									"    return header.key === 'Location';",
+									"}",
+									"",
+									"const tempContPath = responseJson.find(isLocation);",
+									"pm.collectionVariables.set(\"tempTempContPath\", tempContPath.value);",
+									"pm.collectionVariables.set(\"tempTempContId\",tempContPath.value.substring(tempContPath.value.lastIndexOf('/') + 1));",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "file",
+							"file": {
+								"src": "repodemoexample.xlsx"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/temp-contents?filename={{tempTemplateName}}.xlsx",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"temp-contents"
+							],
+							"query": [
+								{
+									"key": "filename",
+									"value": "{{tempTemplateName}}.xlsx"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "07 Create report template",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.collectionVariables.set(\"tempTargetTemplateId\", responseJson.id);",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"{{tempTemplateName}}\",\n  \"description\": \"{{tempTemplateDescription}}\",\n  \"temporaryContentId\": \"{{tempTempContId}}\",\n  \"sourceAppId\": \"{{tempTargetAppId}}\",\n  \"sourceAppAction\": \"replace\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/report-templates",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"report-templates"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "08 List & create filters",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json().data;",
+									"",
+									"for (filter in responseJson) {",
+									"    //console.log(responseJson[filter]);",
+									"",
+									"    var body = responseJson[filter];",
+									"",
+									"    console.log(body);",
+									"    ",
+									"    pm.sendRequest({",
+									"        url: pm.collectionVariables.get(\"baseUrl\") + '/api/v1/apps/' + pm.collectionVariables.get(\"tempTargetAppId\") + '/report-filters',",
+									"        method: 'POST',",
+									"        header: {",
+									"            'accept': 'application/json',",
+									"            'content-type': 'application/json',",
+									"            'Authorization': 'Bearer ' + pm.collectionVariables.get(\"tempBearerToken\")",
+									"        },",
+									"        body: JSON.stringify(body)",
+									"    }, function (err, res) {",
+									"        // Check for a 200 to indicate creation successful",
+									"    })",
+									"}",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/apps/{{sourceAppId}}/report-filters?filterTypes=REP&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"apps",
+								"{{sourceAppId}}",
+								"report-filters"
+							],
+							"query": [
+								{
+									"key": "filterTypes",
+									"value": "REP"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "09 List & create report tasks",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const responseJson = pm.response.json().sharingTasks;",
+									"",
+									"for (task in responseJson) {",
+									"    var taskDetails = responseJson[task];",
+									"    //console.log(taskDetails);",
+									"",
+									"    var tmpTemplates = JSON.stringify(taskDetails.templates);",
+									"    var tmpTemplates = tmpTemplates.replace(pm.collectionVariables.get(\"sourceAppId\"), pm.collectionVariables.get(\"tempTargetAppId\"));",
+									"    var tmpTemplates = tmpTemplates.replace(pm.collectionVariables.get(\"tempTemplateId\"), pm.collectionVariables.get(\"tempTargetTemplateId\"));",
+									"    var tmpTemplates = JSON.parse(tmpTemplates);",
+									"",
+									"    //var body = JSON.stringify(responseJson[task]);",
+									"    var body = {",
+									"        \"name\": taskDetails.name,",
+									"        \"appName\": taskDetails.appName,",
+									"        \"description\": taskDetails.description,",
+									"        \"emailContent\": taskDetails.emailContent,",
+									"        \"recipients\": taskDetails.recipients,",
+									"        \"retentionPolicy\": taskDetails.retentionPolicy,",
+									"        \"state\": taskDetails.state,",
+									"        \"subType\": taskDetails.subType,",
+									"        \"templates\": tmpTemplates,",
+									"        \"transportChannels\": taskDetails.transportChannels,",
+									"        \"trigger\": {\"recurrence\":[],\"executeOnAppReload\":true},",
+									"        \"type\": taskDetails.type",
+									"    };",
+									"",
+									"    console.log(body);",
+									"",
+									"    pm.sendRequest({",
+									"        url: pm.collectionVariables.get(\"baseUrl\") + '/api/v1/sharing-tasks',",
+									"        method: 'POST',",
+									"        header: {",
+									"            'accept': 'application/json',",
+									"            'content-type': 'application/json',",
+									"            'Authorization': 'Bearer ' + pm.collectionVariables.get(\"tempBearerToken\")",
+									"        },",
+									"        body: JSON.stringify(body)",
+									"    }, function (err, res) {",
+									"        // Check for a 200 to indicate creation successful",
+									"    })",
+									"}",
+									"",
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/sharing-tasks?appid={{sourceAppId}}&type=template-sharing",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"sharing-tasks"
+							],
+							"query": [
+								{
+									"key": "appid",
+									"value": "{{sourceAppId}}"
+								},
+								{
+									"key": "type",
+									"value": "template-sharing"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Trigger reports",
+			"item": [
+				{
+					"name": "01 Trigger app reload",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Correct response to request\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"appId\": \"{{tempTargetAppId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/reloads",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reloads"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{tempBearerToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://mytenant.us.qlikcloud.com",
+			"type": "string"
+		},
+		{
+			"key": "sourceAppId",
+			"value": "7c5f34dc-20fd-4b73-8f44-bb07cf10af77",
+			"type": "string"
+		},
+		{
+			"key": "targetSpaceId",
+			"value": "65574a465e0db3d30b56815f",
+			"type": "string"
+		},
+		{
+			"key": "clientId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "clientSecret",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
