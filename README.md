@@ -5,7 +5,7 @@ To learn more about the Qlik Cloud platform visit the developer documentation si
 
 ## Examples
 * [Examples, in various languages, from the Platform Operations tutorials](./qlik.dev/tutorials/platform-operations) on [qlik.dev](https://qlik.dev/manage/platform-operations/overview)
-* [Postman collection from the Deploy Tabular Reports tutorial](./qlik.dev/tutorials/deploy-tabular-reports) on [qlik.dev](https://qlik.dev/manage/reports/deploy-tabular-reports)
+* [Postman collection & asset examples for the Deploy Tabular Reports tutorial](./qlik.dev/tutorials/deploy-tabular-reports) on [qlik.dev](https://qlik.dev/manage/reports/deploy-tabular-reports)
 
 ## License
 The code in this repo is freely available for general use under MIT License.
