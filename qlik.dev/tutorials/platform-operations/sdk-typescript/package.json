@@ -9,13 +9,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@qlik/sdk": "0.27.1",
+    "@qlik/sdk": "0.28.0",
     "dotenv": "16.4.5",
     "yargs": "17.7.2"
   },
   "devDependencies": {
-    "eslint": "9.7.0",
+    "eslint": "9.9.1",
     "eslint-config-airbnb-base": "15.0.0",
-    "eslint-plugin-import": "2.29.1"
+    "eslint-plugin-import": "2.30.0"
   }
 }
