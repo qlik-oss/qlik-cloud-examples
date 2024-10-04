@@ -14,8 +14,8 @@
     "yargs": "17.7.2"
   },
   "devDependencies": {
-    "eslint": "9.9.1",
+    "eslint": "9.12.0",
     "eslint-config-airbnb-base": "15.0.0",
-    "eslint-plugin-import": "2.30.0"
+    "eslint-plugin-import": "2.31.0"
   }
 }
