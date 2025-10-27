@@ -67,25 +67,44 @@ node index.js
 
 ```
 Sheet: Dashboard
-└─ Sheet has 5 object(s):
-  Object ID: abc123
-    Object Name: Sales Overview
-    Object Type: barchart
-  Object ID: def456
-    Object Name: KPI Panel
-    Object Type: sn-layout-container
+└─ Sheet has 3 object(s):
+  - Object ID: abc123
+    Name: Sales Overview
+    Type: barchart
+    Master Item ID: master-123
+  - Object ID: def456
+    Name: KPI Panel
+    Type: sn-layout-container
     └─ Has 2 child object(s):
-       Object ID: ghi789
-         Object Name: Total Sales
-         Object Type: kpi
-       Object ID: jkl012
-         Object Name: Total Orders
-         Object Type: kpi
+       - Object ID: ghi789
+         Name: Total Sales
+         Type: kpi
+       - Object ID: jkl012
+         Name: Total Orders
+         Type: kpi
 
 ==================================================
 Summary:
   Total Sheets: 1
   Total Objects: 5
+==================================================
+
+==================================================
+Master Item Usage:
+==================================================
+
+Master Item ID: master-123
+  Used 1 time(s):
+  └─ Sheet: "Dashboard" (sheet1)
+     1 instance(s)
+       - abc123: "Sales Overview"
+
+==================================================
+Visualization Type Distribution:
+==================================================
+  kpi: 2
+  barchart: 1
+  sn-layout-container: 1
 ==================================================
 ```
 
@@ -106,8 +125,11 @@ These are loaded from the `.env` file using the `dotenv` package.
 When `SAVE_LAYOUTS=true`, the script will:
 - Create a `layouts/<app-id>/` directory
 - Clear any existing files in that directory
-- Save each object's layout as a JSON file named `<object-id>.json`
-- The layout files contain full object metadata, properties, and child object information
+- Save each sheet's layout as a JSON file named `sheet-layout_<sheet-id>.json`
+- Save each sheet's properties as a JSON file named `sheet-properties_<sheet-id>.json`
+- Save each object's layout as a JSON file named `viz_<object-id>.json`
+- Generate an `object-library.json` file with a complete inventory and analysis
+- The layout and properties files contain full object/sheet metadata, properties, and child object information
 
 This is useful for:
 
@@ -115,6 +137,58 @@ This is useful for:
 - Understanding object relationships
 - Analyzing app composition
 - Exporting object configurations
+- Tracking master item usage across sheets
+- Analyzing visualization type distribution
+
+### Object Library
+
+The `object-library.json` file contains a comprehensive analysis of your app:
+
+**Sheets**: List of all sheets with IDs, titles, and object counts
+
+**Objects**: Complete inventory of all objects with:
+- ID, title, type
+- Master item status and ID
+- Associated sheet ID
+
+**Master Item Usage**: Detailed tracking showing:
+- Each master item ID
+- Total usage count
+- Every sheet where it's used
+- Object instances with IDs and titles
+
+**Visualization Types**: Distribution of visualization types across the app
+
+**Summary Statistics**: Quick overview including:
+- Total sheets and objects
+- Unique visualization types
+- Number of master items used
+
+Example structure:
+```json
+{
+  "sheets": [...],
+  "objects": [...],
+  "masterItemUsage": [
+    {
+      "masterItemId": "abc-123",
+      "usageCount": 5,
+      "usages": [
+        {
+          "sheetId": "sheet1",
+          "sheetTitle": "Dashboard",
+          "objectId": "obj1",
+          "objectTitle": "Sales Chart"
+        }
+      ]
+    }
+  ],
+  "visualizationTypes": [...],
+  "summary": {...}
+}
+```
+
+For query examples and tips on analyzing the object library, see [query-examples.md](query-examples.md).
 
 ## Why OAuth instead of API Key?
 
