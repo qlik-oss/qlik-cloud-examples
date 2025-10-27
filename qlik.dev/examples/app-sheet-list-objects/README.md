@@ -188,8 +188,6 @@ Example structure:
 }
 ```
 
-For query examples and tips on analyzing the object library, see [query-examples.md](query-examples.md).
-
 ## Why OAuth instead of API Key?
 
 This example uses OAuth authentication because it requires a WebSocket connection to the Qlik engine. API keys require a web integration to be configured for WebSocket connections, while OAuth provides direct access without additional configuration.
