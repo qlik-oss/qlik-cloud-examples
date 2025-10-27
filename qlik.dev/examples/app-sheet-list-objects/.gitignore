@@ -1,0 +1,8 @@
+# Environment variables
+.env
+
+# Dependencies
+node_modules/
+
+# Layout files (generated at runtime)
+layouts/
