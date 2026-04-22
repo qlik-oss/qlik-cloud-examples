@@ -1,6 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "local>qlik-oss/renovate-config"
+    "local>qlik-oss/renovate-config",
+    ":automergeMinor",
+    ":automergeDigest"
   ]
 }
