@@ -1,60 +1,52 @@
-# Qlik Nodejs SDK Examples
+# Qlik API (JavaScript) Platform Operations Examples
 
-Example js implementations of various tutorials from [Qlik Platform Operations tutorials](https://qlik.dev/tutorials#platform-operations) on [qlik.dev](http://qlik.dev).
+Example JavaScript implementations of the [Platform Operations tutorials](https://qlik.dev/manage/platform-operations/) on [qlik.dev](https://qlik.dev), using [`@qlik/api`](https://www.npmjs.com/package/@qlik/api).
 
 ## Prerequisites
 
-* Nodejs 18.10.0 or higher
-* Private and public key files have been created for JWT authorization as described [here](https://qlik.dev/tutorials/create-signed-tokens-for-jwt-authorization)
-* OAuth clientId and clientSecret
+* Node.js 22 or higher
+* An OAuth M2M client with `clientId` and `clientSecret` — see [Authenticate for Platform Operations](https://qlik.dev/manage/platform-operations/authenticate-for-platform-operations)
 
 ## Setup
 
-* `npm install`
+```bash
+npm install
+```
 
 ## Running
 
-### Dotenv
+Copy `.env.example` to `.env` and fill in your values, or pass flags directly. If a `.env` file exists, args are read from it; otherwise from the command line.
 
-Read args from .env file if it exists, otherwise from args
-
-### Run
-
-* [Create a tenant](https://qlik.dev/tutorials/create-a-tenant), example usage:
+### [Create a tenant](https://qlik.dev/manage/platform-operations/create-a-tenant)
 
 ```bash
 node runTenantCreate.js \
   --sourceTenantUrl <HOSTNAME> \
-  --registrationTenantUrl <HOSTNAME> \
+  --registrationTenantUrl register.<REGION>.qlikcloud.com \
   --sourceTenantAdminEmail <admin email> \
   --clientId <CLIENT_ID> \
   --clientSecret <CLIENT_SECRET>
 ```
 
-* [Configure a tenant](https://qlik.dev/tutorials/configure-a-tenant), example usage:
+### [Configure a tenant](https://qlik.dev/manage/platform-operations/configure-a-tenant)
 
 ```bash
 node runTenantConfigure.js \
-  --tenantUrl <HOSTNAME> \
+  --targetTenantUrl <HOSTNAME> \
   --clientId <CLIENT_ID> \
-  --clientSecret <CLIENT_SECRET> \
-  --jwtIssuer <ISSUER> \
-  --jwtKeyId <KEY_ID> \
-  --jwtPrivateKeyFilePath <path to privatekey.pem> \
-  --jwtPublicKeyFilePath <path to publickey.cer>
+  --clientSecret <CLIENT_SECRET>
 ```
 
-* [Deploy a Qlik Sense application to a tenant](https://qlik.dev/tutorials/deploy-a-qlik-sense-application-to-a-tenant), example usage:
+### [Deploy a Qlik Sense application to a tenant](https://qlik.dev/manage/platform-operations/deploy-content-to-a-tenant)
 
 ```bash
 node runTenantDeploy.js \
   --sourceTenantUrl <HOSTNAME> \
-  --sourceAppId <APP ID> \
+  --sourceAppId <APP_ID> \
   --targetTenantUrl <HOSTNAME> \
   --clientId <CLIENT_ID> \
   --clientSecret <CLIENT_SECRET> \
-  --jwtIssuer <ISSUER> \
-  --jwtKeyId <KEY_ID> \
-  --jwtPrivateKeyFilePath <path to privatekey.pem> \
-  --jwtPublicKeyFilePath <path to publickey.cer>
+  [--analyticsConsumerGroupId <GROUP_ID>]
 ```
+
+`--analyticsConsumerGroupId` is optional. When provided (e.g. the value returned by `runTenantConfigure`), the script verifies that a member of that group can access the published app via OAuth impersonation.

@@ -1,0 +1,12 @@
+{
+  "name": "create-bookmark",
+  "version": "1.0.0",
+  "description": "Create and publish a Qlik Cloud bookmark",
+  "type": "module",
+  "dependencies": {
+    "@qlik/api": "^1.48.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

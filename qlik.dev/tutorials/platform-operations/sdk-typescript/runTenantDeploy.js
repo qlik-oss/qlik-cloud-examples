@@ -1,17 +1,15 @@
-const { default: Qlik, AuthType } = require('@qlik/sdk');
-const fs = require('fs');
-const yargs = require('yargs');
-const dotenv = require('dotenv');
-const { createSdkClient } = require('./qlik-sdk-helper');
-const { runTenantDeployContent } = require('./tenant_deploy_content');
+import fs from 'fs';
+import dotenv from 'dotenv';
+import yargs from 'yargs';
+import { hideBin } from 'yargs/helpers';
+import { runTenantDeployContent } from './tenant_deploy_content.js';
 
 (async () => {
-  // Read args from .env file if it exists, otherwise from args
   let argsSource = {};
   if (fs.existsSync('.env')) {
     argsSource = dotenv.config({ path: '.env' }).parsed;
   } else {
-    const { argv } = yargs(process.argv.slice(2))
+    argsSource = await yargs(hideBin(process.argv))
       .usage('Deploy content to a tenant\n\nUsage: $0 [options]')
       .help('help').alias('help', 'h')
       .describe({
@@ -20,10 +18,7 @@ const { runTenantDeployContent } = require('./tenant_deploy_content');
         sourceTenantUrl: 'The hostname of the tenant, for example: tenant.region.qlikcloud.com',
         targetTenantUrl: 'The hostname of the tenant, for example: tenant.region.qlikcloud.com',
         sourceAppId: 'source app id',
-        jwtIssuer: "The 'issuer' field to use in the JWT.",
-        jwtKeyId: "The 'kid' field to use in the JWT.",
-        jwtPrivateKeyFilePath: 'The path to the local private key file.',
-        jwtPublicKeyFilePath: 'The path to the local public key file.',
+        analyticsConsumerGroupId: 'Optional: group ID (from runTenantConfigure) used to verify consumer access to the published app',
       })
       .demandOption([
         'clientId',
@@ -31,12 +26,8 @@ const { runTenantDeployContent } = require('./tenant_deploy_content');
         'sourceTenantUrl',
         'targetTenantUrl',
         'sourceAppId',
-        'jwtIssuer',
-        'jwtKeyId',
-        'jwtPrivateKeyFilePath',
-        'jwtPublicKeyFilePath',
-      ]);
-    argsSource = argv;
+      ])
+      .argv;
   }
 
   const {
@@ -45,24 +36,13 @@ const { runTenantDeployContent } = require('./tenant_deploy_content');
     sourceTenantUrl,
     targetTenantUrl,
     sourceAppId,
-    jwtIssuer,
-    jwtKeyId,
-    jwtPrivateKeyFilePath,
-    jwtPublicKeyFilePath,
+    analyticsConsumerGroupId,
   } = argsSource;
 
-  const sourceTenantClient = await createSdkClient(clientId, clientSecret, sourceTenantUrl);
-  const targetTenantClient = await createSdkClient(clientId, clientSecret, targetTenantUrl);
-  const jwtPrivateKey = fs.readFileSync(jwtPrivateKeyFilePath, 'utf8');
-  const jwtPublicKey = fs.readFileSync(jwtPublicKeyFilePath, 'utf8');
-  const jwtConfig = {
-    jwtIssuer,
-    jwtKeyId,
-    jwtPrivateKey,
-    jwtPublicKey,
-  };
+  const sourceHostConfig = { authType: 'oauth2', host: sourceTenantUrl, clientId, clientSecret };
+  const targetHostConfig = { authType: 'oauth2', host: targetTenantUrl, clientId, clientSecret };
 
   await runTenantDeployContent({
-    sourceTenantClient, sourceAppId, targetTenantClient, jwtConfig,
+    sourceHostConfig, sourceAppId, targetHostConfig, analyticsConsumerGroupId,
   });
 })();
