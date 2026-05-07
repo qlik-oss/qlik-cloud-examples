@@ -1,8 +1,8 @@
 import { getMyUser } from '@qlik/api/users';
-import { patchGroupsSettings, createGroup as createGroupApi, getGroups } from '@qlik/api/groups';
+import { patchGroupsSettings, patchGroup, createGroup as createGroupApi, getGroups } from '@qlik/api/groups';
 import { getLicenseSettings, updateLicenseSettings } from '@qlik/api/licenses';
 import { createSpace, getSpaces, getSpace, createSpaceAssignment } from '@qlik/api/spaces';
-import { SPACE_SHARED_DEV, SPACE_MANAGED_PROD, GROUP_ANALYTICS_CONSUMER } from './constants.js';
+import { SPACE_SHARED_DEV, SPACE_MANAGED_PROD, GROUP_ANALYTICS_CONSUMER, ROLE_ANALYTICS_ADMIN } from './constants.js';
 
 async function getTenantId(hostConfig) {
   const { data: me } = await getMyUser({ hostConfig });
@@ -11,7 +11,10 @@ async function getTenantId(hostConfig) {
 }
 
 async function enableAutoGroupCreation(hostConfig) {
-  await patchGroupsSettings([{ op: 'replace', path: '/autoCreateGroups', value: true }], { hostConfig });
+  await patchGroupsSettings([
+    { op: 'replace', path: '/autoCreateGroups', value: true },
+    { op: 'replace', path: '/syncIdpGroups', value: true },
+  ], { hostConfig });
   console.info(`Enabled group auto creation on tenant '${hostConfig.host}'.`);
 }
 
@@ -86,6 +89,15 @@ async function createOrGetGroup(hostConfig, groupName) {
   return groupId;
 }
 
+async function assignRolesToGroup(hostConfig, groupId, roles) {
+  await patchGroup(
+    groupId,
+    [{ op: 'replace', path: '/assignedRoles', value: roles.map((name) => ({ name })) }],
+    { hostConfig },
+  );
+  console.info(`Assigned roles '${roles}' to group '${groupId}' in tenant '${hostConfig.host}'.`);
+}
+
 async function assignToSpace(hostConfig, space, groupId, roles) {
   try {
     await createSpaceAssignment(
@@ -113,6 +125,7 @@ export const runTenantConfigure = async (hostConfig) => {
   const devSpace = await createSharedSpace(hostConfig);
   const prodSpace = await createManagedSpace(hostConfig);
   const analyticsConsumerGroupId = await createOrGetGroup(hostConfig, GROUP_ANALYTICS_CONSUMER);
+  await assignRolesToGroup(hostConfig, analyticsConsumerGroupId, [ROLE_ANALYTICS_ADMIN]);
   await assignToSpace(hostConfig, prodSpace, analyticsConsumerGroupId, ['consumer']);
 
   console.info(`The tenant '${hostConfig.host}' has been configured.`);

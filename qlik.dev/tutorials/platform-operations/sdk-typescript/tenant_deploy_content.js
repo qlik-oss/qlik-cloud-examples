@@ -85,13 +85,17 @@ async function publishAppToSpace(hostConfig, app, spaceId) {
   if (previouslyPublishedItem) {
     const { data: repub } = await republishApp(
       app.attributes.id,
-      { targetId: previouslyPublishedItem.resourceAttributes.id, spaceId },
+      { targetId: previouslyPublishedItem.resourceAttributes.id, spaceId, checkOriginAppId: false },
       { hostConfig },
     );
     publishedApp = repub;
     console.log(`Republished app '${app.attributes.id}' to '${publishedApp.attributes.id}' in tenant '${hostConfig.host}'.`);
   } else {
-    const { data: pub } = await publishApp(app.attributes.id, { spaceId }, { hostConfig });
+    const { data: pub } = await publishApp(
+      app.attributes.id,
+      { spaceId, attributes: { name: app.attributes.name, description: '' } },
+      { hostConfig },
+    );
     publishedApp = pub;
     console.log(`Published app '${app.attributes.id}' to '${publishedApp.attributes.id}' in tenant '${hostConfig.host}'.`);
   }

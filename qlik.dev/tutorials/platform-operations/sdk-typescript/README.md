@@ -28,6 +28,17 @@ node runTenantCreate.js \
   --clientSecret <CLIENT_SECRET>
 ```
 
+### [Add an interactive user to a tenant](https://qlik.dev/manage/platform-operations/add-an-interactive-user-to-a-tenant)
+
+```bash
+node runTenantAddUser.js \
+  --sourceTenantUrl <HOSTNAME> \
+  --targetTenantUrl <HOSTNAME> \
+  --email <EMAIL_ADDRESS> \
+  --clientId <CLIENT_ID> \
+  --clientSecret <CLIENT_SECRET>
+```
+
 ### [Configure a tenant](https://qlik.dev/manage/platform-operations/configure-a-tenant)
 
 ```bash
