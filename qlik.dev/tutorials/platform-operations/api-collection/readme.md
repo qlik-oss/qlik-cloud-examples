@@ -22,10 +22,10 @@ Please note:
 
 The [Platform Operations collection](./Platform%20Operations%20Example.postman_collection.json) approximately aligns to the following documentation:
 
-* [1 - Create a tenant](https://qlik.dev/tutorials/create-a-tenant)
+* [1 - Create a tenant](https://qlik.dev/manage/platform-operations/create-a-tenant)
 
-* [2 - Add interactive user to a tenant](https://qlik.dev/tutorials/add-an-interactive-user-to-a-tenant)
+* [2 - Add interactive user to a tenant](https://qlik.dev/manage/platform-operations/add-an-interactive-user-to-a-tenant)
 
-* [3 - Configure a tenant](https://qlik.dev/tutorials/configure-a-tenant)
+* [3 - Configure a tenant](https://qlik.dev/manage/platform-operations/configure-a-tenant)
 
-* [4 - Deploy a Qlik Sense application to a tenant](https://qlik.dev/tutorials/deploy-a-qlik-sense-application-to-a-tenant)
+* [4 - Deploy a Qlik Sense application to a tenant](https://qlik.dev/manage/platform-operations/deploy-content-to-a-tenant)

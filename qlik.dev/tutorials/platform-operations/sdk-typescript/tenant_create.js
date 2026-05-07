@@ -1,14 +1,25 @@
-const { createSdkClient } = require('./qlik-sdk-helper');
-const { ROLE_TENANT_ADMIN } = require('./constants');
+import { getAccessToken } from '@qlik/api/auth';
+import { getLicenseOverview } from '@qlik/api/licenses';
+import { getMyUser } from '@qlik/api/users';
+import { runTenantAddUser } from './tenant_add_user.js';
 
-async function getSignedEntitlementKey(sdkClient) {
-  const res = await sdkClient.licenses.getOverview();
-  console.info(`Retrieved the signed entitlement key from tenant '${sdkClient.auth.config.host}'.`);
-  return res.licenseKey;
+async function getSignedEntitlementKey(hostConfig) {
+  const { data: overview } = await getLicenseOverview({ hostConfig });
+  console.info(`Retrieved the signed entitlement key from tenant '${hostConfig.host}'.`);
+  return overview.licenseKey;
 }
 
-async function createTenant(sdkClient, licenseKey) {
-  const res = await sdkClient.rest('/tenants', { method: 'post', body: JSON.stringify({ licenseKey }) }).then((resp) => resp.json());
+async function createTenant(hostConfig, licenseKey) {
+  const token = await getAccessToken({ hostConfig });
+  const resp = await fetch(`https://${hostConfig.host}/api/v1/tenants`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ licenseKey }),
+  });
+  const res = await resp.json();
   console.info(`Created tenant '${res.hostnames[0]}' with ID '${res.id}'.`);
   return {
     tenantId: res.id,
@@ -16,52 +27,23 @@ async function createTenant(sdkClient, licenseKey) {
   };
 }
 
-async function checkAccessToTenant(sdkClient, tenantId) {
-  const me = await sdkClient.users.getMe();
+async function checkAccessToTenant(hostConfig, tenantId) {
+  const { data: me } = await getMyUser({ hostConfig });
   if (me.tenantId !== tenantId) {
-    console.error(`The tenant '${sdkClient.auth.config.host}' does not have the expected ID: '${tenantId}' != '${me.tenantId}'.`);
+    console.error(`The tenant '${hostConfig.host}' does not have the expected ID: '${tenantId}' != '${me.tenantId}'.`);
     return false;
   }
-  console.info(`Successfully accessed tenant '${sdkClient.auth.config.host}'.`);
+  console.info(`Successfully accessed tenant '${hostConfig.host}'.`);
   return true;
 }
 
-async function createTenantAdmin(sourceTenantClient, targetTenantClient, tenantAdminMail) {
-  const resp = await sourceTenantClient.users.getUsers({ filter: `email eq "${tenantAdminMail}"` });
-  if (resp.data && resp.data.length === 0) {
-    throw Error(`No user with email '${tenantAdminMail}' exists in the tenant '${sourceTenantClient.auth.config.host}.`);
+export async function runTenantCreate(sourceHostConfig, registrationHostConfig, clientId, clientSecret, sourceTenantAdminEmail) {
+  const licenseKey = await getSignedEntitlementKey(sourceHostConfig);
+  const { tenantId, tenantHostname } = await createTenant(registrationHostConfig, licenseKey);
+  const targetHostConfig = { authType: 'oauth2', host: tenantHostname, clientId, clientSecret };
+  if (await checkAccessToTenant(targetHostConfig, tenantId)) {
+    await runTenantAddUser(sourceHostConfig, targetHostConfig, sourceTenantAdminEmail);
   }
-  const { data: [sourceTenantAdminUser] } = resp;
-  console.info(`Retrieved user for email '${tenantAdminMail}' from tenant '${sourceTenantClient.auth.config.host}'.`);
-  if (!sourceTenantAdminUser.roles.includes(ROLE_TENANT_ADMIN)) {
-    throw Error(`The user with email '${tenantAdminMail}' is not a tenant admin in the tenant '${sourceTenantClient.auth.config.host}.`);
-  }
-  const { data: targetTenantRoles } = await targetTenantClient.roles.getRoles({ filter: `name eq "${ROLE_TENANT_ADMIN}"` });
-  console.info(`Retrieved roles from tenant '${targetTenantClient.auth.config.host}'.`, targetTenantRoles);
-
-  const targetTenantAdminRole = targetTenantRoles.find((role) => role.name === ROLE_TENANT_ADMIN);
-  if (!targetTenantAdminRole) {
-    throw new Error(`No role with the name '${ROLE_TENANT_ADMIN}' exists in the tenant '${targetTenantClient.auth.config.host}'.`);
-  }
-  const user = await targetTenantClient.users.create({
-    name: sourceTenantAdminUser.name,
-    email: sourceTenantAdminUser.email,
-    subject: sourceTenantAdminUser.subject,
-    assignedRoles: [{ id: targetTenantAdminRole.id }],
-  });
-
-  console.info(`Created tenant admin user for user with email '${tenantAdminMail}' with ID '${user.id}' in tenant '${targetTenantClient.auth.config.host}'.`);
+  console.log(`The tenant '${targetHostConfig.host}' has been created.`);
+  return targetHostConfig;
 }
-
-async function runTenantCreate(sourceTenantClient, registrationClient, oauthClientId, oauthSecret, sourceTenantAdminEmail) {
-  const licenseKey = await getSignedEntitlementKey(sourceTenantClient);
-  const { tenantId, tenantHostname } = await createTenant(registrationClient, licenseKey);
-  const targetTenantClient = await createSdkClient(oauthClientId, oauthSecret, tenantHostname);
-  if (await checkAccessToTenant(targetTenantClient, tenantId)) {
-    await createTenantAdmin(sourceTenantClient, targetTenantClient, sourceTenantAdminEmail);
-  }
-  console.log(`The tenant '${targetTenantClient.auth.config.host}' has been created.`);
-  return targetTenantClient;
-}
-
-module.exports = { runTenantCreate };

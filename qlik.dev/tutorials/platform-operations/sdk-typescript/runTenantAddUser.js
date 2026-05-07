@@ -2,7 +2,7 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
-import { runTenantDeployContent } from './tenant_deploy_content.js';
+import { runTenantAddUser } from './tenant_add_user.js';
 
 (async () => {
   let argsSource = {};
@@ -10,22 +10,21 @@ import { runTenantDeployContent } from './tenant_deploy_content.js';
     argsSource = dotenv.config({ path: '.env' }).parsed;
   } else {
     argsSource = await yargs(hideBin(process.argv))
-      .usage('Deploy content to a tenant\n\nUsage: $0 [options]')
+      .usage('Add an interactive user to a tenant\n\nUsage: $0 [options]')
       .help('help').alias('help', 'h')
       .describe({
         clientId: 'OAuth Client ID',
         clientSecret: 'OAuth Client Secret',
-        sourceTenantUrl: 'The hostname of the tenant, for example: tenant.region.qlikcloud.com',
-        targetTenantUrl: 'The hostname of the tenant, for example: tenant.region.qlikcloud.com',
-        sourceAppId: 'source app id',
-        analyticsConsumerGroupId: 'Optional: group ID (from runTenantConfigure) used to verify consumer access to the published app',
+        sourceTenantUrl: 'The hostname of the source tenant, for example: tenant.region.qlikcloud.com',
+        targetTenantUrl: 'The hostname of the target tenant, for example: tenant.region.qlikcloud.com',
+        email: 'Email address of the Qlik Account user to add as TenantAdmin',
       })
       .demandOption([
         'clientId',
         'clientSecret',
         'sourceTenantUrl',
         'targetTenantUrl',
-        'sourceAppId',
+        'email',
       ])
       .argv;
   }
@@ -35,14 +34,11 @@ import { runTenantDeployContent } from './tenant_deploy_content.js';
     clientSecret,
     sourceTenantUrl,
     targetTenantUrl,
-    sourceAppId,
-    analyticsConsumerGroupId,
+    email,
   } = argsSource;
 
   const sourceHostConfig = { authType: 'oauth2', host: sourceTenantUrl, clientId, clientSecret };
   const targetHostConfig = { authType: 'oauth2', host: targetTenantUrl, clientId, clientSecret };
 
-  await runTenantDeployContent({
-    sourceHostConfig, sourceAppId, targetHostConfig, analyticsConsumerGroupId,
-  });
+  await runTenantAddUser(sourceHostConfig, targetHostConfig, email);
 })();

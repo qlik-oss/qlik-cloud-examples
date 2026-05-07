@@ -1,134 +1,156 @@
-const fs = require('fs');
-const { GROUP_ANALYTICS_CONSUMER } = require('./constants');
-const { getJwtFetch } = require('./qlik-sdk-helper');
-const { SPACE_SHARED_DEV, SPACE_MANAGED_PROD } = require('./constants');
+import fs from 'fs';
+import { getAccessToken } from '@qlik/api/auth';
+import { getMyUser, createUser, deleteUser } from '@qlik/api/users';
+import { getSpaces, getSpace, createSpaceAssignment } from '@qlik/api/spaces';
+import { getAppInfo, exportApp, importApp, publishApp, republishApp } from '@qlik/api/apps';
+import { getItems } from '@qlik/api/items';
+import { GROUP_ANALYTICS_CONSUMER, SPACE_SHARED_DEV, SPACE_MANAGED_PROD } from './constants.js';
 
-async function verifyAccessToApp(sdkClient, appId) {
-  const { id: userId } = await sdkClient.users.getMe();
-  const app = await sdkClient.apps.get(appId);
-  console.log(`Retrieved the app with ID '${appId}' from tenant '${sdkClient.auth.config.host}'.`);
+async function verifyAccessToApp(hostConfig, appId) {
+  const { data: me } = await getMyUser({ hostConfig });
+  const { data: app } = await getAppInfo(appId, { hostConfig });
+  console.log(`Retrieved the app with ID '${appId}' from tenant '${hostConfig.host}'.`);
 
-  // If the app is in a shared space the bot user (who is a tenant admin)
-  // needs to assign themselves to the space before they can access the app
   if (app.attributes.spaceId) {
-    const space = await sdkClient.spaces.get(app.attributes.spaceId);
-    console.log(`Retrieved the space with ID '${space.id}' from tenant '${sdkClient.auth.config.host}'.`);
+    const { data: space } = await getSpace(app.attributes.spaceId, { hostConfig });
+    console.log(`Retrieved the space with ID '${space.id}' from tenant '${hostConfig.host}'.`);
     if (space.type !== 'shared') {
-      console.log(`The source app with ID '${appId}' is in a managed space, it must be in a shared or personal space in tenant '${sdkClient.auth.config.host}'.`);
+      console.log(`The source app '${appId}' is in a managed space; it must be in a shared or personal space in tenant '${hostConfig.host}'.`);
       process.exit(1);
     }
-
     try {
-      await space.createAssignment({ type: 'user', assigneeId: userId, roles: ['producer'] });
-      console.log(`The user with ID '${userId}' has been assigned to the space with ID '${space.id}' with the roles '{roles}' in tenant '${sdkClient.auth.config.host}'.`);
-    } catch (error) {
-      // TODO
-      // if error.status === 409 then exists else throw error
+      await createSpaceAssignment(space.id, { type: 'user', assigneeId: me.id, roles: ['producer'] }, { hostConfig });
+      console.log(`Assigned user '${me.id}' to space '${space.id}' with role 'producer' in tenant '${hostConfig.host}'.`);
+    } catch {
+      // 409 means assignment already exists
     }
-    console.log(`Verified that the user with ID '${userId}' has access to the app with '${appId}' in tenant '${sdkClient.auth.config.host}'.`);
+    console.log(`Verified user '${me.id}' has access to app '${appId}' in tenant '${hostConfig.host}'.`);
   }
 }
 
-async function getSpace(sdkClient, spaceName) {
+async function findSpaceByName(hostConfig, spaceName) {
   let space = false;
   try {
-    const spacesResponse = await sdkClient.spaces.getSpaces({ name: spaceName });
-    space = await sdkClient.spaces.get(spacesResponse.data[0].id);
-    console.info(`Found existing space '${spaceName}' `);
-  } catch (error) {
+    const { data: spacesResponse } = await getSpaces({ name: spaceName }, { hostConfig });
+    const { data: found } = await getSpace(spacesResponse.data[0].id, { hostConfig });
+    space = found;
+    console.info(`Found existing space '${spaceName}'`);
+  } catch {
     console.info(`Failed to get the space '${spaceName}'`);
   }
   return space;
 }
 
-async function exportApp(sdkClient, appId) {
-  const app = await sdkClient.apps.get(appId);
-  console.log(`Retrieved the app with ID '${appId}' from tenant '${sdkClient.auth.config.host}'.`);
+async function exportAppToFile(hostConfig, appId) {
+  const { data: app } = await getAppInfo(appId, { hostConfig });
+  console.log(`Retrieved the app with ID '${appId}' from tenant '${hostConfig.host}'.`);
 
-  const appLocationUrl = await app.export();
+  const { headers } = await exportApp(appId, {}, { hostConfig });
+  const locationPath = headers.get('location');
 
-  // Download the app to a local file so it can be imported
-  const downloadResponse = await sdkClient.rest(appLocationUrl, { method: 'get' });
+  const token = await getAccessToken({ hostConfig });
+  const downloadResponse = await fetch(`https://${hostConfig.host}${locationPath}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   const filename = `${app.attributes.name}.qvf`;
   fs.writeFileSync(filename, Buffer.from(await downloadResponse.arrayBuffer()));
-  console.log(`Exported the app '${app.attributes.name}' with ID '${appId}' from '${sdkClient.auth.config.host}' to '${filename}'.`);
-  return filename;
+  console.log(`Exported app '${app.attributes.name}' (ID '${appId}') from '${hostConfig.host}' to '${filename}'.`);
+  return { filename, appName: app.attributes.name };
 }
 
-async function importApp(sdkClient, appFilename, spaceId) {
-  const devSpace = await sdkClient.spaces.get(spaceId);
-  console.log(`Retrieved the space with ID '${devSpace.id}' from tenant '${sdkClient.auth.config.host}'.`);
+async function importAppFromFile(hostConfig, appFilename, spaceId) {
+  const { data: devSpace } = await getSpace(spaceId, { hostConfig });
+  console.log(`Retrieved the space with ID '${devSpace.id}' from tenant '${hostConfig.host}'.`);
   const appData = fs.readFileSync(appFilename);
-  const importedApp = await sdkClient.apps.importApp(appData, { spaceId });
-  console.log(`Imported the app '${appFilename}' to app '${importedApp.attributes.name}' with ID '${importedApp.attributes.id}' in space '${devSpace.name}' with ID '${devSpace.id}' in '${sdkClient.auth.config.host}'.`);
+  const { data: importedApp } = await importApp({ spaceId }, appData, { hostConfig });
+  console.log(`Imported '${appFilename}' as app '${importedApp.attributes.name}' (ID '${importedApp.attributes.id}') in space '${devSpace.name}' in '${hostConfig.host}'.`);
   return importedApp;
 }
 
-async function publishApp(sdkClient, app, spaceId) {
-  const space = await sdkClient.spaces.get(spaceId);
-  console.log(`Retrieved the space with ID '${spaceId}' from tenant '${sdkClient.auth.config.host}'.`);
+async function publishAppToSpace(hostConfig, app, spaceId) {
+  const { data: space } = await getSpace(spaceId, { hostConfig });
+  console.log(`Retrieved the space with ID '${spaceId}' from tenant '${hostConfig.host}'.`);
   if (space.type !== 'managed') {
-    console.error(`The space ID '${spaceId}' given for tenant '${sdkClient.auth.config.host}' must be a managed space.`);
+    console.error(`The space '${spaceId}' in tenant '${hostConfig.host}' must be a managed space.`);
     process.exit(1);
   }
-  // Determine if the app is previously published
-  const items = await sdkClient.items.getItems({ resourceType: 'app', spaceId, name: app.attributes.name });
-  const previouslyPublishedItem = items.data.find(
+  const { data: itemsResp } = await getItems(
+    { resourceType: 'app', spaceId, name: app.attributes.name },
+    { hostConfig },
+  );
+  const previouslyPublishedItem = itemsResp.data.find(
     (item) => item.resourceAttributes.originAppId === app.attributes.id,
   );
   let publishedApp;
   if (previouslyPublishedItem) {
-    // Republish (replaces the previously published app)
-    publishedApp = await app.setPublish({
-      targetId: previouslyPublishedItem.resourceAttributes.id,
-      spaceId,
-    });
-    console.log(`Republished the app with ID '${app.attributes.id}' to the app with ID '${publishedApp.attributes.id}' in tenant '${sdkClient.auth.config.host}'.`);
+    const { data: repub } = await republishApp(
+      app.attributes.id,
+      { targetId: previouslyPublishedItem.resourceAttributes.id, spaceId, checkOriginAppId: false },
+      { hostConfig },
+    );
+    publishedApp = repub;
+    console.log(`Republished app '${app.attributes.id}' to '${publishedApp.attributes.id}' in tenant '${hostConfig.host}'.`);
   } else {
-    // publish
-    publishedApp = await app.publish({ spaceId });
-    console.log(`Published the app with ID '${app.attributes.id}' to the app with ID '${publishedApp.attributes.id}' in tenant '${sdkClient.auth.config.host}'.`);
+    const { data: pub } = await publishApp(
+      app.attributes.id,
+      { spaceId, attributes: { name: app.attributes.name, description: '' } },
+      { hostConfig },
+    );
+    publishedApp = pub;
+    console.log(`Published app '${app.attributes.id}' to '${publishedApp.attributes.id}' in tenant '${hostConfig.host}'.`);
   }
-  console.log(`The app '${app.attributes.name}' with ID '${app.attributes.id}' has been published to space '${space.name}' with app ID '${publishedApp.attributes.id}' in tenant '${sdkClient.auth.config.host}'."`);
+  console.log(`App '${app.attributes.name}' published to space '${space.name}' as '${publishedApp.attributes.id}' in tenant '${hostConfig.host}'.`);
   return publishedApp;
 }
 
-async function verifyUserAccessToPublishedApp(sdkClient, appId, jwtIdpConfig) {
-  const jwtFetch = await getJwtFetch(sdkClient.auth.config.host, jwtIdpConfig);
-  const userResponse = await jwtFetch('/api/v1/users/me', { method: 'get' });
-  const userData = await userResponse.json();
-  console.log(`Created a JWT authentication session for a user in group '${GROUP_ANALYTICS_CONSUMER}' in tenant '${sdkClient.auth.config.host}'.`);
-  // add retry
+async function verifyUserAccessToPublishedApp(hostConfig, appId, groupId) {
+  const adminConfig = { ...hostConfig, scope: 'admin_classic user_default' };
+  const testEmail = `test-consumer-${Date.now()}@example.com`;
+
+  const { data: testUser } = await createUser(
+    {
+      name: testEmail,
+      email: testEmail,
+      subject: testEmail,
+      status: 'active',
+      assignedGroups: groupId ? [{ id: groupId }] : [],
+    },
+    { hostConfig: adminConfig },
+  );
+  console.log(`Created temporary test user '${testUser.id}' in tenant '${hostConfig.host}'.`);
+
+  const impersonatedConfig = { ...hostConfig, userId: testUser.id, scope: 'user_default' };
+  const token = await getAccessToken({ hostConfig: impersonatedConfig });
+
   let verifiedAccess = false;
-  const maxWaitTime = Date.now() + 120 * 1000; // 2 minutes from now
+  const maxWaitTime = Date.now() + 120 * 1000;
   while (!verifiedAccess && Date.now() < maxWaitTime) {
     try {
-      await jwtFetch(`/api/v1/apps/${appId}`, { method: 'get' });
-      verifiedAccess = true;
-    } catch (error) {
+      const resp = await fetch(`https://${hostConfig.host}/api/v1/apps/${appId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      verifiedAccess = resp.ok;
+    } catch {
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
-  console.log(`${verifiedAccess ? 'Success' : 'Fail'} : verify user access for the group '${GROUP_ANALYTICS_CONSUMER}' to the published app with ID '${appId}' in tenant '${sdkClient.auth.config.host}'.`);
-  // Delete the temporary user
-  const user = await sdkClient.users.get(userData.id);
-  await user.delete();
-  console.log(`Deleted temporary user with ID '${user.id}' from '${sdkClient.auth.config.host}'.`);
+  console.log(`${verifiedAccess ? 'Success' : 'Fail'}: verify '${GROUP_ANALYTICS_CONSUMER}' group access to app '${appId}' in tenant '${hostConfig.host}'.`);
+
+  await deleteUser(testUser.id, { hostConfig: adminConfig });
+  console.log(`Deleted temporary user '${testUser.id}' from '${hostConfig.host}'.`);
 }
 
-const runTenantDeployContent = async ({
-  sourceTenantClient, sourceAppId, targetTenantClient, jwtConfig,
+export const runTenantDeployContent = async ({
+  sourceHostConfig, sourceAppId, targetHostConfig, analyticsConsumerGroupId,
 }) => {
-  await verifyAccessToApp(sourceTenantClient, sourceAppId);
-  const exportedAppFilename = await exportApp(sourceTenantClient, sourceAppId);
-  const targetSharedSpace = await getSpace(targetTenantClient, SPACE_SHARED_DEV);
-  const targetManagedSpace = await getSpace(targetTenantClient, SPACE_MANAGED_PROD);
-  const importedApp = await importApp(targetTenantClient, exportedAppFilename, targetSharedSpace.id);
+  await verifyAccessToApp(sourceHostConfig, sourceAppId);
+  const { filename: exportedAppFilename } = await exportAppToFile(sourceHostConfig, sourceAppId);
+  const targetSharedSpace = await findSpaceByName(targetHostConfig, SPACE_SHARED_DEV);
+  const targetManagedSpace = await findSpaceByName(targetHostConfig, SPACE_MANAGED_PROD);
+  const importedApp = await importAppFromFile(targetHostConfig, exportedAppFilename, targetSharedSpace.id);
   fs.unlinkSync(exportedAppFilename);
-  const publishedApp = await publishApp(targetTenantClient, importedApp, targetManagedSpace.id);
-  await verifyUserAccessToPublishedApp(targetTenantClient, importedApp.attributes.id, jwtConfig);
-  console.log(`Deployed and published an app from '${sourceTenantClient.auth.config.host}' to '${targetTenantClient.auth.config.host}'.`);
+  const publishedApp = await publishAppToSpace(targetHostConfig, importedApp, targetManagedSpace.id);
+  await verifyUserAccessToPublishedApp(targetHostConfig, importedApp.attributes.id, analyticsConsumerGroupId);
+  console.log(`Deployed and published an app from '${sourceHostConfig.host}' to '${targetHostConfig.host}'.`);
   return publishedApp.attributes.id;
 };
-
-module.exports = { runTenantDeployContent };
