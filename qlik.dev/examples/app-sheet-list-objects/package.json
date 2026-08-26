@@ -4,7 +4,7 @@
   "type": "module",
   "main": "index.js",
   "dependencies": {
-    "@qlik/api": "^2.14.1",
+    "@qlik/api": "^2.15.2",
     "dotenv": "^17.4.2"
   },
   "devDependencies": {},
