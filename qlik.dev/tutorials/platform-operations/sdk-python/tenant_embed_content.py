@@ -183,6 +183,7 @@ def run(jwt_auth, sdk_client, published_app_id, published_app_sheet_id, exit_on_
     web_server_address = (str(web_server_address_parts.hostname), int(web_server_address_parts.port))
 
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
     ctx.check_hostname = False
     ctx.load_cert_chain(certfile=jwt_auth.config.public_key_file_path, keyfile=jwt_auth.config.private_key_file_path)
 
